@@ -36,10 +36,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kyrx.mypresence.ui.animations.AnimatedScrollItem
+import com.kyrx.mypresence.ui.animations.AuroraAnimation
+import com.kyrx.mypresence.ui.animations.MagneticButton
+import com.kyrx.mypresence.ui.animations.ParticleAnimation
 import com.kyrx.mypresence.ui.components.PremiumCard
 import com.kyrx.mypresence.ui.components.PremiumEmptyState
 import com.kyrx.mypresence.ui.components.PremiumSwitch
@@ -48,6 +55,7 @@ import com.kyrx.mypresence.ui.components.ProfileCard
 import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Surface
 import com.kyrx.mypresence.ui.theme.SurfaceBorder
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
@@ -55,33 +63,24 @@ import com.kyrx.mypresence.ui.theme.TextSecondary
 @Composable
 fun DashboardScreen() {
     var headerVisible by remember { mutableStateOf(false) }
-    var profileVisible by remember { mutableStateOf(false) }
-    var toggleVisible by remember { mutableStateOf(false) }
-    var statusVisible by remember { mutableStateOf(false) }
-    var activityVisible by remember { mutableStateOf(false) }
     var presenceEnabled by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         headerVisible = true
-        kotlinx.coroutines.delay(100)
-        profileVisible = true
-        kotlinx.coroutines.delay(100)
-        toggleVisible = true
-        kotlinx.coroutines.delay(100)
-        statusVisible = true
-        kotlinx.coroutines.delay(100)
-        activityVisible = true
     }
 
     val scrollState = rememberScrollState()
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
     ) {
-        PremiumTopBar(
-            title = "My Presence"
+        // Animated Background
+        AuroraAnimation(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(60.dp)
         )
 
         Column(
@@ -90,17 +89,66 @@ fun DashboardScreen() {
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-            // Profile Card
+            // Header
             AnimatedVisibility(
-                visible = profileVisible,
+                visible = headerVisible,
                 enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
                 ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
                 )
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "My Presence",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Manage your Discord status",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary
+                        )
+                    }
+
+                    MagneticButton {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Primary, Secondary)
+                                    ),
+                                    shape = RoundedCornerShape(14.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Bolt,
+                                contentDescription = null,
+                                tint = TextPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Profile Card
+            AnimatedScrollItem(index = 1) {
                 ProfileCard(
                     username = "User",
                     discriminator = "#0001",
@@ -111,14 +159,7 @@ fun DashboardScreen() {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Presence Toggle
-            AnimatedVisibility(
-                visible = toggleVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
-            ) {
+            AnimatedScrollItem(index = 2) {
                 PremiumCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -180,14 +221,7 @@ fun DashboardScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Status Cards
-            AnimatedVisibility(
-                visible = statusVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
-            ) {
+            AnimatedScrollItem(index = 3) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -211,14 +245,7 @@ fun DashboardScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Activity Card
-            AnimatedVisibility(
-                visible = activityVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
-            ) {
+            AnimatedScrollItem(index = 4) {
                 PremiumCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {

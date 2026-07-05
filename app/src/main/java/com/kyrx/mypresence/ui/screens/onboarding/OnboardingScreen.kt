@@ -24,8 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -43,18 +43,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.kyrx.mypresence.ui.theme.DiscordBlurple
-import com.kyrx.mypresence.ui.theme.DiscordDark
-import com.kyrx.mypresence.ui.theme.DiscordDarker
-import com.kyrx.mypresence.ui.theme.DiscordFuchsia
-import com.kyrx.mypresence.ui.theme.DiscordGreen
-import com.kyrx.mypresence.ui.theme.DiscordText
-import com.kyrx.mypresence.ui.theme.DiscordTextMuted
+import com.kyrx.mypresence.ui.animations.AnimatedMeshGradient
+import com.kyrx.mypresence.ui.animations.ParticleAnimation
+import com.kyrx.mypresence.ui.theme.Background
+import com.kyrx.mypresence.ui.theme.Primary
+import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Surface
+import com.kyrx.mypresence.ui.theme.TextPrimary
+import com.kyrx.mypresence.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 data class OnboardingPage(
@@ -69,25 +71,25 @@ private val onboardingPages = listOf(
         icon = Icons.Filled.SportsEsports,
         title = "Welcome to My Presence",
         description = "Show the world what you're playing. Display your Discord Rich Presence directly from your Android device.",
-        gradient = listOf(DiscordBlurple, DiscordFuchsia)
+        gradient = listOf(Primary, Secondary)
     ),
     OnboardingPage(
         icon = Icons.Filled.TrackChanges,
         title = "Real-Time Presence",
         description = "Your status updates instantly across all Discord clients. Friends will see exactly what you're doing, right now.",
-        gradient = listOf(DiscordGreen, DiscordBlurple)
+        gradient = listOf(Primary, Secondary)
     ),
     OnboardingPage(
         icon = Icons.Filled.Security,
         title = "Secure by Design",
         description = "Your credentials never leave your device. We use Discord's official API with zero server-side token storage.",
-        gradient = listOf(DiscordFuchsia, DiscordBlurple)
+        gradient = listOf(Secondary, Primary)
     ),
     OnboardingPage(
         icon = Icons.Filled.Bolt,
         title = "Lightweight & Fast",
         description = "Built with Kotlin and Jetpack Compose. Minimal battery usage with foreground service precision.",
-        gradient = listOf(DiscordBlurple, DiscordGreen)
+        gradient = listOf(Primary, Secondary)
     )
 )
 
@@ -106,15 +108,29 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DiscordDarker)
+            .background(Background)
     ) {
+        // Animated Background
+        AnimatedMeshGradient(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(80.dp)
+        )
+
+        // Particle Animation
+        ParticleAnimation(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.3f)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
             // Brand
             AnimatedVisibility(
@@ -127,11 +143,11 @@ fun OnboardingScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                             .background(
-                                Brush.linearGradient(
-                                    colors = listOf(DiscordBlurple, DiscordFuchsia)
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Primary, Secondary)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -139,23 +155,23 @@ fun OnboardingScreen(
                         Icon(
                             imageVector = Icons.Filled.SportsEsports,
                             contentDescription = "My Presence Logo",
-                            tint = DiscordText,
-                            modifier = Modifier.size(36.dp)
+                            tint = TextPrimary,
+                            modifier = Modifier.size(40.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "My Presence",
                         style = MaterialTheme.typography.headlineLarge,
-                        color = DiscordText,
+                        color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             // Pager
             HorizontalPager(
@@ -171,13 +187,13 @@ fun OnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 20.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 repeat(onboardingPages.size) { index ->
                     val animatedSize by animateFloatAsState(
-                        targetValue = if (currentPage == index) 24f else 8f,
+                        targetValue = if (currentPage == index) 28f else 8f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioMediumBouncy,
                             stiffness = Spring.StiffnessLow
@@ -187,17 +203,25 @@ fun OnboardingScreen(
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
+                            .height(8.dp)
                             .size(animatedSize.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(4.dp))
                             .background(
-                                if (currentPage == index) DiscordBlurple
-                                else DiscordTextMuted.copy(alpha = 0.3f)
+                                if (currentPage == index) {
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Primary, Secondary)
+                                    )
+                                } else {
+                                    Brush.horizontalGradient(
+                                        colors = listOf(TextSecondary.copy(alpha = 0.3f), TextSecondary.copy(alpha = 0.3f))
+                                    )
+                                }
                             )
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Buttons
             Column(
@@ -216,10 +240,10 @@ fun OnboardingScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DiscordBlurple
+                        containerColor = Primary
                     )
                 ) {
                     Text(
@@ -236,19 +260,22 @@ fun OnboardingScreen(
                         onClick = { onOnboardingComplete() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = TextSecondary
+                        )
                     ) {
                         Text(
                             text = "Skip",
                             style = MaterialTheme.typography.titleMedium,
-                            color = DiscordTextMuted
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -267,7 +294,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
                 .size(120.dp)
                 .clip(CircleShape)
                 .background(
-                    Brush.linearGradient(
+                    brush = Brush.linearGradient(
                         colors = page.gradient.filterIsInstance<androidx.compose.ui.graphics.Color>()
                     )
                 ),
@@ -276,17 +303,17 @@ private fun OnboardingPageContent(page: OnboardingPage) {
             Icon(
                 imageVector = page.icon,
                 contentDescription = null,
-                tint = DiscordText,
+                tint = TextPrimary,
                 modifier = Modifier.size(56.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         Text(
             text = page.title,
             style = MaterialTheme.typography.displayMedium,
-            color = DiscordText,
+            color = TextPrimary,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold
         )
@@ -296,7 +323,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
         Text(
             text = page.description,
             style = MaterialTheme.typography.bodyLarge,
-            color = DiscordTextMuted,
+            color = TextSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier.alpha(0.8f)
         )

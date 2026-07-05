@@ -35,7 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -46,11 +48,11 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.kyrx.mypresence.core.utils.GoogleAuthConfig
-import com.kyrx.mypresence.ui.components.PremiumButton
+import com.kyrx.mypresence.ui.animations.AnimatedMeshGradient
+import com.kyrx.mypresence.ui.animations.ParticleAnimation
 import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.Secondary
-import com.kyrx.mypresence.ui.theme.Surface
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
 
@@ -98,6 +100,20 @@ fun GoogleSignInScreen(
             .fillMaxSize()
             .background(Background)
     ) {
+        // Animated Background
+        AnimatedMeshGradient(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(80.dp)
+        )
+
+        // Particle Animation
+        ParticleAnimation(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.3f)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
