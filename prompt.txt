@@ -1,0 +1,242 @@
+You are the Lead Android Engineer, Product Designer, Motion Designer, and UX Architect for this project.
+
+We are building a premium Android application called "My Presence".
+
+The app allows users to manage and display Discord Rich Presence from Android.
+
+This is NOT a hobby project.
+This should feel like a top-tier Play Store application built by a professional startup.
+
+==================================================
+DESIGN PHILOSOPHY
+==================================================
+
+The app should feel comparable to:
+
+- Linear
+- Arc Browser
+- Notion
+- Discord
+- Nothing OS
+- Material 3
+- Raycast
+
+Take inspiration only.
+Do NOT copy any existing design.
+
+The UI must NOT look AI-generated.
+
+It should feel handcrafted by an experienced product designer.
+
+==================================================
+GENERAL STYLE
+==================================================
+
+• Premium
+• Elegant
+• Modern
+• Dark-first
+• Beautiful typography
+• Large spacing
+• Rounded corners
+• Glass only where necessary
+• Smooth gradients
+• Clean hierarchy
+• No clutter
+• No unnecessary borders
+• Minimal but luxurious
+
+==================================================
+COLOR SYSTEM
+==================================================
+
+Background:
+Almost black (#09090B)
+
+Surface:
+#111827
+
+Primary Accent:
+Discord-inspired blurple (#5865F2)
+
+Secondary Accent:
+Cyan (#4FD1FF)
+
+Success:
+Green
+
+Warning:
+Orange
+
+Error:
+Red
+
+==================================================
+ANIMATIONS
+==================================================
+
+Animation quality is EXTREMELY IMPORTANT.
+
+Everything must animate smoothly.
+
+Examples:
+
+• Shared element transitions
+• Spring animations
+• Scroll-based animations
+• Floating action animations
+• Animated cards
+• Smooth page transitions
+• Button ripple effects
+• Fade
+• Scale
+• Blur transitions
+• Physics-based movement
+• Hero animations
+• Bottom sheet animations
+• Elastic interactions
+• Premium loading animations
+• Skeleton loading
+• Pull-to-refresh animation
+• Gesture animations
+
+Animations must run at 60 FPS.
+
+==================================================
+SCROLL EXPERIENCE
+==================================================
+
+Scrolling must feel premium.
+
+Cards should:
+
+• Fade in
+• Scale slightly
+• Elevate subtly
+• Move naturally
+
+Headers should:
+
+• Collapse elegantly
+• Blur while scrolling
+• Change elevation smoothly
+
+Lists should never feel static.
+
+==================================================
+COMPONENTS
+==================================================
+
+Create reusable components only.
+
+Examples:
+
+Buttons
+
+Cards
+
+Dialogs
+
+Bottom Sheets
+
+Navigation Bar
+
+Top Bar
+
+Settings Tiles
+
+Animated Switches
+
+Profile Cards
+
+Loading Views
+
+Empty States
+
+Snackbars
+
+Shimmer Loading
+
+==================================================
+ARCHITECTURE
+==================================================
+
+Use:
+
+Kotlin
+
+Jetpack Compose
+
+Material 3
+
+MVVM
+
+Clean Architecture
+
+Repository Pattern
+
+Hilt
+
+Room
+
+DataStore
+
+Ktor
+
+Coroutines
+
+Flow
+
+WorkManager
+
+Navigation Compose
+
+No deprecated APIs.
+
+==================================================
+PERFORMANCE
+==================================================
+
+The application must:
+
+Launch fast.
+
+Feel responsive.
+
+Avoid unnecessary recomposition.
+
+Follow Compose performance best practices.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT rush into Discord integration.
+
+Build the application foundation first.
+
+Create:
+
+Design System
+
+Typography
+
+Theme
+
+Navigation
+
+Reusable Components
+
+Animation System
+
+Dashboard
+
+Settings
+
+Only after the foundation is complete should we implement authentication and Rich Presence.
+
+Every screen should feel like a premium app with millions of downloads.
+
+Think like a senior designer from Linear or Nothing—not an AI code generator.
+
+Every pixel should have a purpose.

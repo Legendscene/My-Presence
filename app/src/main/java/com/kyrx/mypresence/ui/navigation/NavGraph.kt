@@ -1,0 +1,137 @@
+package com.kyrx.mypresence.ui.navigation
+
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.kyrx.mypresence.ui.components.PremiumBottomNavBar
+import com.kyrx.mypresence.ui.screens.auth.GoogleSignInScreen
+import com.kyrx.mypresence.ui.screens.dashboard.DashboardScreen
+import com.kyrx.mypresence.ui.screens.onboarding.OnboardingScreen
+import com.kyrx.mypresence.ui.screens.profile.ProfileScreen
+import com.kyrx.mypresence.ui.screens.settings.SettingsScreen
+import com.kyrx.mypresence.ui.theme.Background
+
+@Composable
+fun MainApp() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    val showBottomBar = currentDestination?.route in bottomNavItems.map { it.route }
+
+    Scaffold(
+        containerColor = Background,
+        bottomBar = {
+            if (showBottomBar) {
+                PremiumBottomNavBar(
+                    items = bottomNavItems,
+                    currentRoute = currentDestination?.route,
+                    onItemSelected = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            NavGraph(
+                navController = navController,
+                startDestination = Screen.Onboarding.route
+            )
+        }
+    }
+}
+
+@Composable
+fun NavGraph(
+    navController: NavHostController,
+    startDestination: String = Screen.Onboarding.route
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = {
+            fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                tween(300)
+            )
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start,
+                tween(300)
+            )
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                tween(300)
+            )
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                tween(300)
+            )
+        }
+    ) {
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onOnboardingComplete = {
+                    navController.navigate(Screen.GoogleSignIn.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.GoogleSignIn.route) {
+            GoogleSignInScreen(
+                onSignInSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
+                    }
+                },
+                onSignInError = { error ->
+                    // Handle error - could show snackbar
+                }
+            )
+        }
+
+        composable(Screen.Home.route) {
+            DashboardScreen()
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen()
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+    }
+}
