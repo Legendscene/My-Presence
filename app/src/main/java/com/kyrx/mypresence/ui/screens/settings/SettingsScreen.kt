@@ -32,6 +32,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,10 +47,12 @@ import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
+import com.kyrx.mypresence.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit
 ) {
     var headerVisible by remember { mutableStateOf(false) }
@@ -58,8 +61,9 @@ fun SettingsScreen(
     var presenceVisible by remember { mutableStateOf(false) }
     var aboutVisible by remember { mutableStateOf(false) }
     var darkMode by remember { mutableStateOf(true) }
-    var notifications by remember { mutableStateOf(true) }
-    var autoStart by remember { mutableStateOf(false) }
+
+    val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
+    val autoStartEnabled by viewModel.autoStartEnabled.collectAsState()
 
     LaunchedEffect(Unit) {
         headerVisible = true
@@ -76,16 +80,11 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
+        modifier = Modifier.fillMaxSize().background(Background)
     ) {
         TopAppBar(
             title = {
-                Text(
-                    text = "Settings",
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(text = "Settings", fontWeight = FontWeight.SemiBold)
             },
             navigationIcon = {
                 IconButton(onClick = onNavigateBack) {
@@ -110,14 +109,10 @@ fun SettingsScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Appearance Section
             AnimatedVisibility(
                 visible = appearanceVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy))
             ) {
                 SectionHeader(title = "Appearance")
             }
@@ -126,11 +121,8 @@ fun SettingsScreen(
 
             AnimatedVisibility(
                 visible = appearanceVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 PremiumCard {
                     SettingsTile(
@@ -144,14 +136,10 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Notifications Section
             AnimatedVisibility(
                 visible = notificationsVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 SectionHeader(title = "Notifications")
             }
@@ -160,32 +148,25 @@ fun SettingsScreen(
 
             AnimatedVisibility(
                 visible = notificationsVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 PremiumCard {
                     SettingsTile(
                         icon = Icons.Filled.Notifications,
                         title = "Push Notifications",
-                        subtitle = if (notifications) "Enabled" else "Disabled",
-                        onClick = { notifications = !notifications }
+                        subtitle = if (notificationsEnabled) "Enabled" else "Disabled",
+                        onClick = { viewModel.setNotificationsEnabled(!notificationsEnabled) }
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Presence Section
             AnimatedVisibility(
                 visible = presenceVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 SectionHeader(title = "Presence")
             }
@@ -194,32 +175,25 @@ fun SettingsScreen(
 
             AnimatedVisibility(
                 visible = presenceVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 PremiumCard {
                     SettingsTile(
                         icon = Icons.Filled.Bolt,
                         title = "Auto-start on Boot",
-                        subtitle = if (autoStart) "Enabled" else "Disabled",
-                        onClick = { autoStart = !autoStart }
+                        subtitle = if (autoStartEnabled) "Enabled" else "Disabled",
+                        onClick = { viewModel.setAutoStartEnabled(!autoStartEnabled) }
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // About Section
             AnimatedVisibility(
                 visible = aboutVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 SectionHeader(title = "About")
             }
@@ -228,11 +202,8 @@ fun SettingsScreen(
 
             AnimatedVisibility(
                 visible = aboutVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Column {
                     PremiumCard {
@@ -243,9 +214,7 @@ fun SettingsScreen(
                             onClick = {}
                         )
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     PremiumCard {
                         SettingsTile(
                             icon = Icons.Filled.Star,
@@ -253,9 +222,7 @@ fun SettingsScreen(
                             onClick = {}
                         )
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     PremiumCard {
                         SettingsTile(
                             icon = Icons.Filled.Favorite,
@@ -263,9 +230,7 @@ fun SettingsScreen(
                             onClick = {}
                         )
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     PremiumCard {
                         SettingsTile(
                             icon = Icons.Filled.PrivacyTip,
@@ -273,9 +238,7 @@ fun SettingsScreen(
                             onClick = {}
                         )
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     PremiumCard {
                         SettingsTile(
                             icon = Icons.Filled.Code,

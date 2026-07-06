@@ -1,5 +1,8 @@
 package com.kyrx.mypresence.ui.screens.auth
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -32,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.ui.animations.AnimatedMeshGradient
 import com.kyrx.mypresence.ui.animations.ParticleAnimation
 import com.kyrx.mypresence.ui.theme.Background
@@ -52,7 +55,6 @@ import com.kyrx.mypresence.ui.theme.Secondary
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun GoogleSignInScreen(
@@ -62,13 +64,9 @@ fun GoogleSignInScreen(
     var visible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        visible = true
-    }
+    LaunchedEffect(Unit) { visible = true }
 
-    // Auto-navigate after success animation
     LaunchedEffect(showSuccess) {
         if (showSuccess) {
             delay(1500)
@@ -77,40 +75,25 @@ fun GoogleSignInScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
+        modifier = Modifier.fillMaxSize().background(Background)
     ) {
-        // Animated Background
         AnimatedMeshGradient(
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(80.dp)
+            modifier = Modifier.fillMaxSize().blur(80.dp)
         )
-
-        // Particle Animation
         ParticleAnimation(
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(0.3f)
+            modifier = Modifier.fillMaxSize().alpha(0.3f)
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
+            modifier = Modifier.fillMaxSize().padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(80.dp))
 
-            // Logo
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy))
             ) {
                 Box(
                     modifier = Modifier
@@ -143,14 +126,10 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Title
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
                     text = if (showSuccess) "Welcome!" else "Welcome to My Presence",
@@ -165,11 +144,8 @@ fun GoogleSignInScreen(
 
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
                     text = if (showSuccess) "Signed in successfully" else "Sign in to manage your Discord Rich Presence",
@@ -181,27 +157,19 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Security badge
             AnimatedVisibility(
                 visible = visible && !showSuccess,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         imageVector = Icons.Filled.Security,
                         contentDescription = null,
                         tint = Primary,
                         modifier = Modifier.size(24.dp)
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Text(
                         text = "Your data is secure and encrypted",
                         style = MaterialTheme.typography.bodyMedium,
@@ -212,32 +180,20 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Google Sign-In Button
             AnimatedVisibility(
                 visible = visible && !showSuccess,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Button(
                     onClick = {
                         isLoading = true
-                        scope.launch {
-                            // Simulate sign-in (real Google Sign-In needs SHA-1 setup)
-                            delay(2000)
-                            showSuccess = true
-                            isLoading = false
-                        }
+                        showSuccess = true
+                        isLoading = false
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                     enabled = !isLoading
                 ) {
                     if (isLoading) {
@@ -248,7 +204,7 @@ fun GoogleSignInScreen(
                         )
                     } else {
                         Text(
-                            text = "Continue with Google",
+                            text = "Continue with Discord",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF1F1F1F)
@@ -259,14 +215,10 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Terms
             AnimatedVisibility(
                 visible = visible && !showSuccess,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
                     text = "By continuing, you agree to our Terms of Service and Privacy Policy",

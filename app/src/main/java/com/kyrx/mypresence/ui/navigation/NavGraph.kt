@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,6 +25,9 @@ import com.kyrx.mypresence.ui.screens.onboarding.OnboardingScreen
 import com.kyrx.mypresence.ui.screens.profile.ProfileScreen
 import com.kyrx.mypresence.ui.screens.settings.SettingsScreen
 import com.kyrx.mypresence.ui.theme.Background
+import com.kyrx.mypresence.ui.viewmodel.DashboardViewModel
+import com.kyrx.mypresence.ui.viewmodel.ProfileViewModel
+import com.kyrx.mypresence.ui.viewmodel.SettingsViewModel
 
 @Composable
 fun MainApp() {
@@ -112,25 +116,25 @@ fun NavGraph(
                         popUpTo(Screen.GoogleSignIn.route) { inclusive = true }
                     }
                 },
-                onSignInError = { error ->
-                    // Handle error - could show snackbar
-                }
+                onSignInError = { }
             )
         }
 
         composable(Screen.Home.route) {
-            DashboardScreen()
+            val viewModel: DashboardViewModel = hiltViewModel()
+            DashboardScreen(viewModel = viewModel)
         }
 
         composable(Screen.Profile.route) {
-            ProfileScreen()
+            val viewModel: ProfileViewModel = hiltViewModel()
+            ProfileScreen(viewModel = viewModel)
         }
 
         composable(Screen.Settings.route) {
+            val viewModel: SettingsViewModel = hiltViewModel()
             SettingsScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

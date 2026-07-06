@@ -24,4 +24,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "My Presence"
 include(":app")
-include(":app")

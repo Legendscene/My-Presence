@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    implementation("com.google.errorprone:error_prone_annotations:2.36.0")
 
     // Room
     implementation(libs.androidx.room.runtime)

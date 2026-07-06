@@ -14,14 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,25 +46,24 @@ import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.Secondary
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
+import com.kyrx.mypresence.ui.viewmodel.ProfileViewModel
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(viewModel: ProfileViewModel) {
     var visible by remember { mutableStateOf(false) }
+    val currentUser by viewModel.currentUser.collectAsState()
 
-    LaunchedEffect(Unit) {
-        visible = true
-    }
+    LaunchedEffect(Unit) { visible = true }
 
     val scrollState = rememberScrollState()
+    val username = currentUser?.username ?: "User"
+    val discriminator = "#${currentUser?.discriminator ?: "0000"}"
+    val globalName = currentUser?.global_name ?: username
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
+        modifier = Modifier.fillMaxSize().background(Background)
     ) {
-        PremiumTopBar(
-            title = "Profile"
-        )
+        PremiumTopBar(title = "Profile")
 
         Column(
             modifier = Modifier
@@ -74,25 +73,16 @@ fun ProfileScreen() {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Profile Card
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy))
             ) {
-                PremiumCard(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                PremiumCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Avatar
                         Icon(
                             imageVector = Icons.Filled.Person,
                             contentDescription = null,
@@ -100,33 +90,25 @@ fun ProfileScreen() {
                             modifier = Modifier
                                 .size(80.dp)
                                 .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(Primary, Secondary)
-                                    ),
+                                    brush = Brush.linearGradient(colors = listOf(Primary, Secondary)),
                                     shape = CircleShape
                                 )
                                 .padding(24.dp)
                         )
-
                         Spacer(modifier = Modifier.height(16.dp))
-
                         Text(
-                            text = "User",
+                            text = globalName,
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
-                            text = "#0001",
+                            text = discriminator,
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary
                         )
-
                         Spacer(modifier = Modifier.height(16.dp))
-
                         Row {
                             IconButton(onClick = { }) {
                                 Icon(
@@ -142,14 +124,10 @@ fun ProfileScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Account Section
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
                     text = "Account",
@@ -164,11 +142,8 @@ fun ProfileScreen() {
 
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Column {
                     PremiumCard {
@@ -179,15 +154,13 @@ fun ProfileScreen() {
                             onClick = { }
                         )
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     PremiumCard {
                         SettingsTile(
                             icon = Icons.AutoMirrored.Filled.ExitToApp,
                             title = "Sign Out",
                             subtitle = "Disconnect your Discord account",
-                            onClick = { }
+                            onClick = { viewModel.signOut() }
                         )
                     }
                 }

@@ -50,9 +50,20 @@ class AuthRepositoryImpl @Inject constructor(
         _isAuthenticated.value = false
     }
 
+    override suspend fun authenticateWithToken(token: String): Result<DiscordUser> {
+        return try {
+            val user = discordApi.getCurrentUser(token)
+            _currentUser.value = user
+            _isAuthenticated.value = true
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     companion object {
-        private const val CLIENT_ID = ""
-        private const val CLIENT_SECRET = ""
+        private const val CLIENT_ID = "1523344734901370930"
+        private const val CLIENT_SECRET = "1D169JhMDxE8x7k9G7aQQjj2QUhsXGWE"
         private const val REDIRECT_URI = "mypresence://oauth2/callback"
     }
 }

@@ -1,4 +1,4 @@
-# PresenceX ProGuard Rules
+# My Presence ProGuard Rules
 
 # Ktor
 -keep class io.ktor.** { *; }
@@ -12,11 +12,11 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.kyrx.presencex.**$$serializer { *; }
--keepclassmembers class com.kyrx.presencex.** {
+-keep,includedescriptorclasses class com.kyrx.mypresence.**$$serializer { *; }
+-keepclassmembers class com.kyrx.mypresence.** {
     *** Companion;
 }
--keepclasseswithmembers class com.kyrx.presencex.** {
+-keepclasseswithmembers class com.kyrx.mypresence.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

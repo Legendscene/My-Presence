@@ -27,9 +27,12 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,50 +40,48 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kyrx.mypresence.domain.model.GatewayConnectionState
 import com.kyrx.mypresence.ui.animations.AnimatedScrollItem
 import com.kyrx.mypresence.ui.animations.AuroraAnimation
 import com.kyrx.mypresence.ui.animations.MagneticButton
-import com.kyrx.mypresence.ui.animations.ParticleAnimation
 import com.kyrx.mypresence.ui.components.PremiumCard
 import com.kyrx.mypresence.ui.components.PremiumEmptyState
 import com.kyrx.mypresence.ui.components.PremiumSwitch
-import com.kyrx.mypresence.ui.components.PremiumTopBar
 import com.kyrx.mypresence.ui.components.ProfileCard
 import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.Secondary
-import com.kyrx.mypresence.ui.theme.Surface
 import com.kyrx.mypresence.ui.theme.SurfaceBorder
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
+import com.kyrx.mypresence.ui.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(viewModel: DashboardViewModel) {
     var headerVisible by remember { mutableStateOf(false) }
-    var presenceEnabled by remember { mutableStateOf(false) }
+    val gatewayState by viewModel.gatewayState.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    val presenceEnabled by viewModel.presenceEnabled.collectAsState()
+    val presenceName by viewModel.presenceName.collectAsState()
+    val presenceDetails by viewModel.presenceDetails.collectAsState()
+    val presenceState by viewModel.presenceState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        headerVisible = true
-    }
+    LaunchedEffect(Unit) { headerVisible = true }
 
     val scrollState = rememberScrollState()
+    val username = currentUser?.username ?: "User"
+    val discriminator = "#${currentUser?.discriminator ?: "0000"}"
+    val isConnected = gatewayState is GatewayConnectionState.Connected
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
+        modifier = Modifier.fillMaxSize().background(Background)
     ) {
-        // Animated Background
         AuroraAnimation(
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(60.dp)
+            modifier = Modifier.fillMaxSize().blur(60.dp)
         )
 
         Column(
@@ -91,14 +92,10 @@ fun DashboardScreen() {
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Header
             AnimatedVisibility(
                 visible = headerVisible,
-                enter = fadeIn(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + slideInVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                )
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy))
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -112,23 +109,20 @@ fun DashboardScreen() {
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
                             text = "Manage your Discord status",
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary
                         )
                     }
-
                     MagneticButton {
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
                                     brush = Brush.linearGradient(
-                                        colors = listOf(Primary, Secondary)
+                                        colors = if (isConnected) listOf(Primary, Secondary) else listOf(SurfaceBorder, SurfaceBorder)
                                     ),
                                     shape = RoundedCornerShape(14.dp)
                                 ),
@@ -147,32 +141,24 @@ fun DashboardScreen() {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Profile Card
             AnimatedScrollItem(index = 1) {
                 ProfileCard(
-                    username = "User",
-                    discriminator = "#0001",
-                    isOnline = presenceEnabled
+                    username = username,
+                    discriminator = discriminator,
+                    isOnline = isConnected
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Presence Toggle
             AnimatedScrollItem(index = 2) {
-                PremiumCard(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                PremiumCard(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
@@ -191,9 +177,7 @@ fun DashboardScreen() {
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
-
                             Spacer(modifier = Modifier.width(16.dp))
-
                             Column {
                                 Text(
                                     text = "Rich Presence",
@@ -201,18 +185,21 @@ fun DashboardScreen() {
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary
                                 )
-
                                 Text(
-                                    text = if (presenceEnabled) "Active" else "Inactive",
+                                    text = when (gatewayState) {
+                                        is GatewayConnectionState.Connected -> "Active"
+                                        is GatewayConnectionState.Connecting -> "Connecting..."
+                                        is GatewayConnectionState.Disconnected -> "Inactive"
+                                        is GatewayConnectionState.Error -> "Error"
+                                    },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (presenceEnabled) Primary else TextSecondary
+                                    color = if (isConnected) Primary else TextSecondary
                                 )
                             }
                         }
-
                         PremiumSwitch(
                             checked = presenceEnabled,
-                            onCheckedChange = { presenceEnabled = it }
+                            onCheckedChange = { viewModel.togglePresence(it) }
                         )
                     }
                 }
@@ -220,23 +207,56 @@ fun DashboardScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Status Cards
-            AnimatedScrollItem(index = 3) {
+            if (presenceEnabled) {
+                AnimatedScrollItem(index = 3) {
+                    PremiumCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+                            Text(
+                                text = "Presence Configuration",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            PresenceTextField(
+                                label = "Activity Name",
+                                value = presenceName,
+                                onValueChange = { viewModel.updatePresenceName(it) }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            PresenceTextField(
+                                label = "Details",
+                                value = presenceDetails,
+                                onValueChange = { viewModel.updatePresenceDetails(it) }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            PresenceTextField(
+                                label = "State",
+                                value = presenceState,
+                                onValueChange = { viewModel.updatePresenceState(it) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            AnimatedScrollItem(index = 4) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     StatusCard(
                         icon = Icons.Filled.Gamepad,
-                        title = "Playing",
-                        value = "None",
+                        title = "Status",
+                        value = if (isConnected) "Connected" else "Offline",
                         modifier = Modifier.weight(1f)
                     )
-
                     StatusCard(
                         icon = Icons.Filled.Timer,
-                        title = "Duration",
-                        value = "0h 0m",
+                        title = "Session",
+                        value = if (isConnected) "Active" else "Idle",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -244,28 +264,19 @@ fun DashboardScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Activity Card
-            AnimatedScrollItem(index = 4) {
-                PremiumCard(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+            AnimatedScrollItem(index = 5) {
+                PremiumCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
+                        modifier = Modifier.fillMaxWidth().padding(20.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Filled.MusicNote,
                                 contentDescription = null,
                                 tint = Primary,
                                 modifier = Modifier.size(20.dp)
                             )
-
                             Spacer(modifier = Modifier.width(12.dp))
-
                             Text(
                                 text = "Current Activity",
                                 style = MaterialTheme.typography.titleMedium,
@@ -273,9 +284,7 @@ fun DashboardScreen() {
                                 color = TextPrimary
                             )
                         }
-
                         Spacer(modifier = Modifier.height(16.dp))
-
                         if (!presenceEnabled) {
                             PremiumEmptyState(
                                 icon = Icons.Filled.Bolt,
@@ -284,7 +293,7 @@ fun DashboardScreen() {
                             )
                         } else {
                             Text(
-                                text = "Presence is active. Your Discord status is being updated.",
+                                text = "$presenceName • $presenceDetails",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextSecondary
                             )
@@ -299,19 +308,40 @@ fun DashboardScreen() {
 }
 
 @Composable
+private fun PresenceTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Primary,
+            unfocusedBorderColor = SurfaceBorder,
+            focusedLabelColor = Primary,
+            unfocusedLabelColor = TextSecondary,
+            cursorColor = Primary,
+            focusedTextColor = TextPrimary,
+            unfocusedTextColor = TextPrimary
+        )
+    )
+}
+
+@Composable
 private fun StatusCard(
     icon: ImageVector,
     title: String,
     value: String,
     modifier: Modifier = Modifier
 ) {
-    PremiumCard(
-        modifier = modifier
-    ) {
+    PremiumCard(modifier = modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             Icon(
                 imageVector = icon,
@@ -319,17 +349,13 @@ private fun StatusCard(
                 tint = Primary,
                 modifier = Modifier.size(24.dp)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
-
             Spacer(modifier = Modifier.height(4.dp))
-
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
