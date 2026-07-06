@@ -370,8 +370,8 @@ fun GoogleSignInScreen(
         onDiscordSignIn = {
             // Discord OAuth flow using Chrome Custom Tabs for better UX
             val clientId = Constants.CLIENT_ID
-            val redirectUri = Constants.REDIRECT_URI
-            val scope = "identify%20rpc"
+            val redirectUri = java.net.URLEncoder.encode(Constants.REDIRECT_URI, "UTF-8")
+            val scope = "identify rpc"
             val discordAuthUrl = "https://discord.com/api/oauth2/authorize" +
                     "?client_id=$clientId" +
                     "&redirect_uri=$redirectUri" +
