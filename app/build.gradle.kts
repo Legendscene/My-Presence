@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    id("com.google.gms.google-services")
 }
 
 kotlin {
@@ -107,6 +108,13 @@ dependencies {
 
     // Chrome Custom Tabs (for Discord OAuth)
     implementation("androidx.browser:browser:1.7.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-config-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
 
     // Coil
     implementation(libs.coil.compose)
