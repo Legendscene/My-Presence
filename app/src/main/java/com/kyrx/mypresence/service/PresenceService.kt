@@ -33,6 +33,7 @@ import javax.inject.Inject
 class PresenceService : Service() {
 
     @Inject lateinit var discordGateway: DiscordGateway
+    @Inject lateinit var preferencesRepository: com.kyrx.mypresence.domain.repository.PreferencesRepository
 
     companion object {
         const val CHANNEL_ID = "presence_service"
@@ -84,7 +85,10 @@ class PresenceService : Service() {
         val notification = buildNotification("Connecting to Discord...")
         startForeground(NOTIFICATION_ID, notification)
         serviceScope.launch {
-            discordGateway.connect(Constants.DISCORD_TOKEN)
+            val token = preferencesRepository.accessToken.first()
+            if (token != null) {
+                discordGateway.connect(token)
+            }
         }
     }
 

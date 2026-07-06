@@ -57,8 +57,6 @@ class DashboardViewModel @Inject constructor(
             val token = preferencesRepository.accessToken.first()
             if (token != null) {
                 authRepository.loadCurrentUser(token)
-            } else {
-                authRepository.authenticateWithToken(Constants.DISCORD_TOKEN)
             }
         }
     }
