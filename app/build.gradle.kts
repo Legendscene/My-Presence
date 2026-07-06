@@ -105,6 +105,9 @@ dependencies {
     // Google Sign-In
     implementation(libs.google.play.services.auth)
 
+    // Chrome Custom Tabs (for Discord OAuth)
+    implementation("androidx.browser:browser:1.7.0")
+
     // Coil
     implementation(libs.coil.compose)
 

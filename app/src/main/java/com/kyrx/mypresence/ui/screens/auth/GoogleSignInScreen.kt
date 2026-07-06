@@ -2,11 +2,8 @@ package com.kyrx.mypresence.ui.screens.auth
 
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -37,7 +34,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +56,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.browser.customtabs.CustomTabsIntent
 import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.ui.animations.AnimatedMeshGradient
 import com.kyrx.mypresence.ui.animations.ParticleAnimation
@@ -76,9 +74,6 @@ import kotlinx.coroutines.launch
 
 // Discord brand colors
 private val DiscordBlurple = Color(0xFF5865F2)
-private val DiscordDark = Color(0xFF23272A)
-private val GoogleWhite = Color(0xFFFFFFFF)
-private val GoogleBlue = Color(0xFF4285F4)
 
 @Composable
 fun LoginScreen(
@@ -373,29 +368,28 @@ fun GoogleSignInScreen(
 
     LoginScreen(
         onDiscordSignIn = {
-            // Discord OAuth flow - tries Discord app first, then browser
+            // Discord OAuth flow using Chrome Custom Tabs for better UX
             val clientId = Constants.CLIENT_ID
             val redirectUri = Constants.REDIRECT_URI
-            val scope = Constants.SCOPE
+            val scope = "identify%20rpc"
             val discordAuthUrl = "https://discord.com/api/oauth2/authorize" +
                     "?client_id=$clientId" +
                     "&redirect_uri=$redirectUri" +
                     "&response_type=code" +
                     "&scope=$scope"
 
-            // Try to open Discord app first using custom URI scheme
-            val discordAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse("discord://")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+            // Open in Chrome Custom Tabs (better than regular browser)
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setToolbarColor(0xFF5865F2.toInt()) // Discord blurple
+                .build()
 
             try {
-                context.startActivity(discordAppIntent)
+                customTabsIntent.launchUrl(context, Uri.parse(discordAuthUrl))
             } catch (e: Exception) {
-                // Discord app not installed, fallback to browser
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(browserIntent)
+                // Fallback to regular browser
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl))
+                context.startActivity(intent)
             }
 
             // Simulate success for now

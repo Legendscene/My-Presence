@@ -8,16 +8,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.kyrx.mypresence.data.repository.PreferencesRepositoryImpl
 import com.kyrx.mypresence.ui.components.PremiumBottomNavBar
 import com.kyrx.mypresence.ui.screens.auth.GoogleSignInScreen
 import com.kyrx.mypresence.ui.screens.dashboard.DashboardScreen
@@ -28,12 +32,36 @@ import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.viewmodel.DashboardViewModel
 import com.kyrx.mypresence.ui.viewmodel.ProfileViewModel
 import com.kyrx.mypresence.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.flow.first
+import javax.inject.Inject
 
 @Composable
-fun MainApp() {
+fun MainApp(
+    preferencesRepository: PreferencesRepositoryImpl
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    var startDestination by remember { mutableStateOf<String?>(null) }
+
+    // Check if onboarding is completed
+    LaunchedEffect(Unit) {
+        val onboardingCompleted = preferencesRepository.isOnboardingCompleted.first()
+        val accessToken = preferencesRepository.accessToken.first()
+
+        startDestination = when {
+            !onboardingCompleted -> Screen.Onboarding.route
+            accessToken == null -> Screen.GoogleSignIn.route
+            else -> Screen.Home.route
+        }
+    }
+
+    // Show loading while checking
+    if (startDestination == null) {
+        Box(modifier = Modifier)
+        return
+    }
 
     val showBottomBar = currentDestination?.route in bottomNavItems.map { it.route }
 
@@ -60,7 +88,7 @@ fun MainApp() {
         Box(modifier = Modifier.padding(innerPadding)) {
             NavGraph(
                 navController = navController,
-                startDestination = Screen.Onboarding.route
+                startDestination = startDestination!!
             )
         }
     }
@@ -105,6 +133,9 @@ fun NavGraph(
                     navController.navigate(Screen.GoogleSignIn.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
+                },
+                onOnboardingCompleted = {
+                    // Save onboarding completion state
                 }
             )
         }

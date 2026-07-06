@@ -95,7 +95,8 @@ private val onboardingPages = listOf(
 
 @Composable
 fun OnboardingScreen(
-    onOnboardingComplete: () -> Unit
+    onOnboardingComplete: () -> Unit,
+    onOnboardingCompleted: () -> Unit = {}
 ) {
     val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
     val scope = rememberCoroutineScope()
