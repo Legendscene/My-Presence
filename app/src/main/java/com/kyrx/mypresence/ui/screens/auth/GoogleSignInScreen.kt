@@ -1,34 +1,47 @@
 package com.kyrx.mypresence.ui.screens.auth
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,18 +66,31 @@ import com.kyrx.mypresence.ui.animations.ParticleAnimation
 import com.kyrx.mypresence.ui.theme.Background
 import com.kyrx.mypresence.ui.theme.Primary
 import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Surface
+import com.kyrx.mypresence.ui.theme.SurfaceBorder
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+// Discord brand colors
+private val DiscordBlurple = Color(0xFF5865F2)
+private val DiscordDark = Color(0xFF23272A)
+private val GoogleWhite = Color(0xFFFFFFFF)
+private val GoogleBlue = Color(0xFF4285F4)
 
 @Composable
-fun GoogleSignInScreen(
+fun LoginScreen(
+    onDiscordSignIn: () -> Unit,
+    onGoogleSignIn: () -> Unit,
     onSignInSuccess: () -> Unit,
     onSignInError: (String) -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
+    var showMoreOptions by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { visible = true }
 
@@ -90,6 +117,7 @@ fun GoogleSignInScreen(
         ) {
             Spacer(modifier = Modifier.height(80.dp))
 
+            // Logo
             AnimatedVisibility(
                 visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
@@ -126,6 +154,7 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Title
             AnimatedVisibility(
                 visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
@@ -157,6 +186,7 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // Security badge
             AnimatedVisibility(
                 visible = visible && !showSuccess,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
@@ -180,6 +210,7 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Main Discord Sign-In Button
             AnimatedVisibility(
                 visible = visible && !showSuccess,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
@@ -188,26 +219,25 @@ fun GoogleSignInScreen(
                 Button(
                     onClick = {
                         isLoading = true
-                        showSuccess = true
-                        isLoading = false
+                        onDiscordSignIn()
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = DiscordBlurple),
                     enabled = !isLoading
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color(0xFF1F1F1F),
+                            color = Color.White,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Text(
-                            text = "Continue with Discord",
+                            text = "Sign in with Discord",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1F1F1F)
+                            color = Color.White
                         )
                     }
                 }
@@ -215,6 +245,105 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Divider with "or"
+            AnimatedVisibility(
+                visible = visible && !showSuccess,
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = SurfaceBorder
+                    )
+                    Text(
+                        text = "or",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = SurfaceBorder
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // More Options Toggle
+            AnimatedVisibility(
+                visible = visible && !showSuccess,
+                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                        slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Surface)
+                        .clickable { showMoreOptions = !showMoreOptions }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "More options",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (showMoreOptions) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // More Options Panel
+            AnimatedVisibility(
+                visible = showMoreOptions && !showSuccess,
+                enter = expandVertically(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
+                ) + fadeIn(),
+                exit = shrinkVertically(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
+                ) + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                ) {
+                    // Google Sign-In Button
+                    OutlinedButton(
+                        onClick = {
+                            isLoading = true
+                            onGoogleSignIn()
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            text = "Sign in with Google",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Terms
             AnimatedVisibility(
                 visible = visible && !showSuccess,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
@@ -232,4 +361,41 @@ fun GoogleSignInScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+// Keep old name for navigation compatibility
+@Composable
+fun GoogleSignInScreen(
+    onSignInSuccess: () -> Unit,
+    onSignInError: (String) -> Unit
+) {
+    val context = LocalContext.current
+
+    LoginScreen(
+        onDiscordSignIn = {
+            // Discord OAuth flow - opens browser
+            val clientId = Constants.CLIENT_ID
+            val redirectUri = Constants.REDIRECT_URI
+            val scope = Constants.SCOPE
+            val discordAuthUrl = "https://discord.com/api/oauth2/authorize" +
+                    "?client_id=$clientId" +
+                    "&redirect_uri=$redirectUri" +
+                    "&response_type=code" +
+                    "&scope=$scope"
+
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl))
+            context.startActivity(intent)
+
+            // Simulate success for now
+            MainScope().launch {
+                delay(2000)
+                onSignInSuccess()
+            }
+        },
+        onGoogleSignIn = {
+            onSignInError("Google Sign-In coming soon with Firebase!")
+        },
+        onSignInSuccess = onSignInSuccess,
+        onSignInError = onSignInError
+    )
 }
