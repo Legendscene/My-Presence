@@ -373,7 +373,7 @@ fun GoogleSignInScreen(
 
     LoginScreen(
         onDiscordSignIn = {
-            // Discord OAuth flow - opens browser
+            // Discord OAuth flow - tries Discord app first, then browser
             val clientId = Constants.CLIENT_ID
             val redirectUri = Constants.REDIRECT_URI
             val scope = Constants.SCOPE
@@ -383,8 +383,20 @@ fun GoogleSignInScreen(
                     "&response_type=code" +
                     "&scope=$scope"
 
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl))
-            context.startActivity(intent)
+            // Try to open Discord app first using custom URI scheme
+            val discordAppIntent = Intent(Intent.ACTION_VIEW, Uri.parse("discord://")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            try {
+                context.startActivity(discordAppIntent)
+            } catch (e: Exception) {
+                // Discord app not installed, fallback to browser
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(browserIntent)
+            }
 
             // Simulate success for now
             MainScope().launch {
