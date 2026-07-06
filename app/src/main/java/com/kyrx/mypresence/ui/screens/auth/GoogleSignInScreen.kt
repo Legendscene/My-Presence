@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.browser.customtabs.CustomTabsIntent
 import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.ui.animations.AnimatedMeshGradient
@@ -68,11 +67,7 @@ import com.kyrx.mypresence.ui.theme.Surface
 import com.kyrx.mypresence.ui.theme.SurfaceBorder
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-// Discord brand colors
 private val DiscordBlurple = Color(0xFF5865F2)
 
 @Composable
@@ -84,17 +79,9 @@ fun LoginScreen(
 ) {
     var visible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var showSuccess by remember { mutableStateOf(false) }
     var showMoreOptions by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { visible = true }
-
-    LaunchedEffect(showSuccess) {
-        if (showSuccess) {
-            delay(1500)
-            onSignInSuccess()
-        }
-    }
 
     Box(
         modifier = Modifier.fillMaxSize().background(Background)
@@ -124,26 +111,17 @@ fun LoginScreen(
                         .clip(CircleShape)
                         .background(
                             brush = Brush.linearGradient(
-                                colors = if (showSuccess) listOf(Primary, Primary) else listOf(Primary, Secondary)
+                                colors = listOf(Primary, Secondary)
                             )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (showSuccess) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = TextPrimary,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.Bolt,
-                            contentDescription = null,
-                            tint = TextPrimary,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.Bolt,
+                        contentDescription = null,
+                        tint = TextPrimary,
+                        modifier = Modifier.size(48.dp)
+                    )
                 }
             }
 
@@ -156,7 +134,7 @@ fun LoginScreen(
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
-                    text = if (showSuccess) "Welcome!" else "Welcome to My Presence",
+                    text = "Welcome to My Presence",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
@@ -172,9 +150,9 @@ fun LoginScreen(
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
                 Text(
-                    text = if (showSuccess) "Signed in successfully" else "Sign in to manage your Discord Rich Presence",
+                    text = "Sign in to manage your Discord Rich Presence",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (showSuccess) Primary else TextSecondary,
+                    color = TextSecondary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -183,7 +161,7 @@ fun LoginScreen(
 
             // Security badge
             AnimatedVisibility(
-                visible = visible && !showSuccess,
+                visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
@@ -207,7 +185,7 @@ fun LoginScreen(
 
             // Main Discord Sign-In Button
             AnimatedVisibility(
-                visible = visible && !showSuccess,
+                visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
@@ -240,9 +218,9 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Divider with "or"
+            // Divider
             AnimatedVisibility(
-                visible = visible && !showSuccess,
+                visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
@@ -251,27 +229,17 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = SurfaceBorder
-                    )
-                    Text(
-                        text = "or",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = SurfaceBorder
-                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = SurfaceBorder)
+                    Text(text = "or", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = SurfaceBorder)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // More Options Toggle
+            // More Options
             AnimatedVisibility(
-                visible = visible && !showSuccess,
+                visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
@@ -285,12 +253,7 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = "More options",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = TextSecondary
-                    )
+                    Text(text = "More options", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = TextSecondary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = if (showMoreOptions) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
@@ -301,37 +264,19 @@ fun LoginScreen(
                 }
             }
 
-            // More Options Panel
             AnimatedVisibility(
-                visible = showMoreOptions && !showSuccess,
-                enter = expandVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + fadeIn(),
-                exit = shrinkVertically(
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
-                ) + fadeOut()
+                visible = showMoreOptions,
+                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)) + fadeIn(),
+                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)) + fadeOut()
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                ) {
-                    // Google Sign-In Button
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     OutlinedButton(
-                        onClick = {
-                            isLoading = true
-                            onGoogleSignIn()
-                        },
+                        onClick = { onGoogleSignIn() },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         enabled = !isLoading
                     ) {
-                        Text(
-                            text = "Sign in with Google",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
+                        Text(text = "Sign in with Google", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     }
                 }
             }
@@ -340,7 +285,7 @@ fun LoginScreen(
 
             // Terms
             AnimatedVisibility(
-                visible = visible && !showSuccess,
+                visible = visible,
                 enter = fadeIn(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
                         slideInVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
             ) {
@@ -358,7 +303,6 @@ fun LoginScreen(
     }
 }
 
-// Keep old name for navigation compatibility
 @Composable
 fun GoogleSignInScreen(
     onSignInSuccess: () -> Unit,
@@ -368,7 +312,6 @@ fun GoogleSignInScreen(
 
     LoginScreen(
         onDiscordSignIn = {
-            // Discord OAuth flow using Chrome Custom Tabs for better UX
             val clientId = Constants.CLIENT_ID
             val redirectUri = java.net.URLEncoder.encode(Constants.REDIRECT_URI, "UTF-8")
             val scope = "identify rpc"
@@ -378,28 +321,20 @@ fun GoogleSignInScreen(
                     "&response_type=code" +
                     "&scope=$scope"
 
-            // Open in Chrome Custom Tabs (better than regular browser)
             val customTabsIntent = CustomTabsIntent.Builder()
                 .setShowTitle(true)
-                .setToolbarColor(0xFF5865F2.toInt()) // Discord blurple
                 .build()
 
             try {
                 customTabsIntent.launchUrl(context, Uri.parse(discordAuthUrl))
             } catch (e: Exception) {
-                // Fallback to regular browser
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(discordAuthUrl))
                 context.startActivity(intent)
             }
-
-            // Simulate success for now
-            MainScope().launch {
-                delay(2000)
-                onSignInSuccess()
-            }
+            // NO simulated success - must wait for actual OAuth callback
         },
         onGoogleSignIn = {
-            onSignInError("Google Sign-In coming soon with Firebase!")
+            onSignInError("Google Sign-In coming soon!")
         },
         onSignInSuccess = onSignInSuccess,
         onSignInError = onSignInError

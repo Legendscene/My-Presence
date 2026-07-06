@@ -96,7 +96,7 @@ private val onboardingPages = listOf(
 @Composable
 fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
-    onOnboardingCompleted: () -> Unit = {}
+    preferencesRepository: com.kyrx.mypresence.domain.repository.PreferencesRepository? = null
 ) {
     val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
     val scope = rememberCoroutineScope()
@@ -236,7 +236,10 @@ fun OnboardingScreen(
                                 pagerState.animateScrollToPage(currentPage + 1)
                             }
                         } else {
-                            onOnboardingComplete()
+                            scope.launch {
+                                preferencesRepository?.setOnboardingCompleted(true)
+                                onOnboardingComplete()
+                            }
                         }
                     },
                     modifier = Modifier
@@ -258,7 +261,12 @@ fun OnboardingScreen(
 
                 if (currentPage < onboardingPages.size - 1) {
                     OutlinedButton(
-                        onClick = { onOnboardingComplete() },
+                        onClick = {
+                            scope.launch {
+                                preferencesRepository?.setOnboardingCompleted(true)
+                                onOnboardingComplete()
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),

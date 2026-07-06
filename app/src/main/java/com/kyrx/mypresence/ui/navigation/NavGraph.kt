@@ -88,7 +88,8 @@ fun MainApp(
         Box(modifier = Modifier.padding(innerPadding)) {
             NavGraph(
                 navController = navController,
-                startDestination = startDestination!!
+                startDestination = startDestination!!,
+                preferencesRepository = preferencesRepository
             )
         }
     }
@@ -97,7 +98,8 @@ fun MainApp(
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    startDestination: String = Screen.Onboarding.route
+    startDestination: String = Screen.Onboarding.route,
+    preferencesRepository: PreferencesRepositoryImpl
 ) {
     NavHost(
         navController = navController,
@@ -134,9 +136,7 @@ fun NavGraph(
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
                 },
-                onOnboardingCompleted = {
-                    // Save onboarding completion state
-                }
+                preferencesRepository = preferencesRepository
             )
         }
 
