@@ -11,21 +11,16 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.kyrx.mypresence.MainActivity
 import com.kyrx.mypresence.R
-import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.data.remote.DiscordGateway
-import com.kyrx.mypresence.domain.model.GatewayConnectionState
-import com.kyrx.mypresence.domain.model.PresenceData
+import com.kyrx.mypresence.core.gateway.GatewayConnectionState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,19 +28,15 @@ import javax.inject.Inject
 class PresenceService : Service() {
 
     @Inject lateinit var discordGateway: DiscordGateway
-    @Inject lateinit var preferencesRepository: com.kyrx.mypresence.domain.repository.PreferencesRepository
 
     companion object {
         const val CHANNEL_ID = "presence_service"
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "com.kyrx.mypresence.START"
         const val ACTION_STOP = "com.kyrx.mypresence.STOP"
-        const val ACTION_UPDATE = "com.kyrx.mypresence.UPDATE"
-        const val EXTRA_PRESENCE = "extra_presence"
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var presenceJob: Job? = null
 
     private val _connectionState = MutableStateFlow<GatewayConnectionState>(GatewayConnectionState.Disconnected)
     val connectionState: StateFlow<GatewayConnectionState> = _connectionState.asStateFlow()
@@ -61,20 +52,6 @@ class PresenceService : Service() {
         when (intent?.action) {
             ACTION_START -> startPresence()
             ACTION_STOP -> stopPresence()
-            ACTION_UPDATE -> {
-                val name = intent.getStringExtra("name") ?: "My Presence"
-                val details = intent.getStringExtra("details") ?: ""
-                val state = intent.getStringExtra("state") ?: ""
-                val type = intent.getIntExtra("type", 0)
-                val status = intent.getStringExtra("status") ?: "online"
-                val enabled = intent.getBooleanExtra("enabled", true)
-                updatePresenceData(
-                    PresenceData(
-                        name = name, details = details, state = state,
-                        type = type, status = status, enabled = enabled
-                    )
-                )
-            }
         }
         return START_STICKY
     }
@@ -82,22 +59,8 @@ class PresenceService : Service() {
     override fun onBind(intent: Intent): IBinder? = null
 
     private fun startPresence() {
-        val notification = buildNotification("Connecting to Discord...")
-        startForeground(NOTIFICATION_ID, notification)
-        serviceScope.launch {
-            val token = preferencesRepository.accessToken.first()
-            if (token != null) {
-                discordGateway.connect(token)
-            }
-        }
-    }
-
-    private fun updatePresenceData(presence: PresenceData) {
-        if (presence.enabled) {
-            serviceScope.launch {
-                discordGateway.updatePresence(presence)
-            }
-        }
+        val notification = buildNotification("My Presence is active")
+        try { startForeground(NOTIFICATION_ID, notification) } catch (_: Exception) {}
     }
 
     private fun observeGatewayState() {
@@ -116,7 +79,6 @@ class PresenceService : Service() {
     }
 
     private fun stopPresence() {
-        presenceJob?.cancel()
         discordGateway.disconnect()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

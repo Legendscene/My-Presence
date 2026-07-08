@@ -14,13 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.kyrx.mypresence.ui.theme.Primary
+import com.kyrx.mypresence.ui.theme.Blurple
 
 @Composable
 fun OrbitAnimation(
     modifier: Modifier = Modifier,
     orbitCount: Int = 3,
-    color: Color = Primary
+    color: Color = Blurple
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "orbit")
 

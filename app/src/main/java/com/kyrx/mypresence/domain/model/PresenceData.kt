@@ -28,11 +28,14 @@ data class PresenceData(
             status = "online"
         )
     }
-}
 
-sealed class GatewayConnectionState {
-    data object Disconnected : GatewayConnectionState()
-    data object Connecting : GatewayConnectionState()
-    data class Connected(val sessionId: String, val sequence: Int?) : GatewayConnectionState()
-    data class Error(val message: String) : GatewayConnectionState()
+    fun toPreviewString(): String = if (details.isNotBlank()) details else name
+
+    fun toConfig(packageName: String): AppPresenceConfig = AppPresenceConfig(
+        packageName = packageName,
+        name = name,
+        details = details,
+        state = state,
+        activityType = type
+    )
 }

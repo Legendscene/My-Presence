@@ -14,13 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.kyrx.mypresence.ui.theme.Primary
-import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Blurple
+import com.kyrx.mypresence.ui.theme.Cyan
 
 @Composable
 fun AnimatedGradientBackground(
     modifier: Modifier = Modifier,
-    colors: List<Color> = listOf(Primary, Secondary)
+    colors: List<Color> = listOf(Blurple, Cyan)
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "gradient")
 
@@ -87,7 +87,7 @@ fun AnimatedMeshGradient(
     ) {
         val gradient1 = Brush.radialGradient(
             colors = listOf(
-                Primary.copy(alpha = 0.4f),
+                Blurple.copy(alpha = 0.4f),
                 Color.Transparent
             ),
             center = Offset(size.width * animatedX / 100, size.height * animatedY / 100),
@@ -96,7 +96,7 @@ fun AnimatedMeshGradient(
 
         val gradient2 = Brush.radialGradient(
             colors = listOf(
-                Secondary.copy(alpha = 0.3f),
+                Cyan.copy(alpha = 0.3f),
                 Color.Transparent
             ),
             center = Offset(

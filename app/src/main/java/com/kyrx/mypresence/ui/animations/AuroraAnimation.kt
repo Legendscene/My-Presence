@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.kyrx.mypresence.ui.theme.Primary
-import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Blurple
+import com.kyrx.mypresence.ui.theme.Cyan
 
 @Composable
 fun AuroraAnimation(
@@ -58,8 +58,8 @@ fun AuroraAnimation(
         // Aurora layer 1
         val gradient1 = Brush.linearGradient(
             colors = listOf(
-                Primary.copy(alpha = 0.3f),
-                Secondary.copy(alpha = 0.2f),
+                Blurple.copy(alpha = 0.3f),
+                Cyan.copy(alpha = 0.2f),
                 Color.Transparent
             ),
             start = Offset(0f, height * animatedOffset1 / 100),
@@ -69,8 +69,8 @@ fun AuroraAnimation(
         // Aurora layer 2
         val gradient2 = Brush.linearGradient(
             colors = listOf(
-                Secondary.copy(alpha = 0.2f),
-                Primary.copy(alpha = 0.3f),
+                Cyan.copy(alpha = 0.2f),
+                Blurple.copy(alpha = 0.3f),
                 Color.Transparent
             ),
             start = Offset(width, height * animatedOffset2 / 100),

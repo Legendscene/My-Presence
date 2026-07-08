@@ -2,72 +2,63 @@ package com.kyrx.mypresence.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Background
-val Background = Color(0xFF09090B)
-val BackgroundElevated = Color(0xFF0F0F12)
+// ── Base Palette ────────────────────────────────────────────────────
+// Deep Indigo Canvas
+val Background = Color(0xFF06060E)
+val BackgroundElevated = Color(0xFF0A0A16)
+val SurfaceDark = Color(0xFF0E0E1C)
+val SurfaceMid = Color(0xFF141426)
+val SurfaceLight = Color(0xFF1A1A30)
+val SurfaceCard = Color(0xFF1E1E36)
+val SurfaceBorder = Color(0xFF2A2A46)
+val SurfaceHover = Color(0xFF323252)
 
-// Surface
-val Surface = Color(0xFF111827)
-val SurfaceElevated = Color(0xFF1A1F2E)
-val SurfaceHover = Color(0xFF1F2537)
-val SurfaceBorder = Color(0xFF252B3B)
+// Violet Accent (Primary)
+val Gold = Color(0xFF7C5CFC)
+val GoldLight = Color(0xFFA78BFA)
+val GoldDark = Color(0xFF5B3ED4)
+val GoldSoft = Color(0xFF1C1440)
+val GoldContainer = Color(0xFF282050)
 
-// Primary Accent - Blurple
-val Primary = Color(0xFF5865F2)
-val PrimaryLight = Color(0xFF7B83F5)
-val PrimaryDark = Color(0xFF4752C4)
-val PrimaryContainer = Color(0xFF1E2340)
+// Discord Blurple (Secondary)
+val Blurple = Color(0xFF5865F2)
+val BlurpleLight = Color(0xFF7B83F5)
+val BlurpleDark = Color(0xFF4752C4)
+val BlurpleContainer = Color(0xFF1E2340)
 
-// Secondary Accent - Cyan
-val Secondary = Color(0xFF4FD1FF)
-val SecondaryLight = Color(0xFF7DDEFF)
-val SecondaryDark = Color(0xFF2BA3E0)
-val SecondaryContainer = Color(0xFF0F2A3D)
+// Cyan Accent
+val Cyan = Color(0xFF4FD1FF)
+val CyanLight = Color(0xFF7DDEFF)
+val CyanDark = Color(0xFF2BA3E0)
 
-// Text
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextTertiary = Color(0xFF64748B)
-val TextDisabled = Color(0xFF475569)
+// Text Hierarchy
+val TextPrimary = Color(0xFFF2F2F4)
+val TextSecondary = Color(0xFFA0A0B0)
+val TextTertiary = Color(0xFF6B6B7A)
+val TextDisabled = Color(0xFF3F3F4A)
 
 // Status
 val Success = Color(0xFF22C55E)
-val SuccessContainer = Color(0xFF0F2918)
-val Warning = Color(0xFFF97316)
-val WarningContainer = Color(0xFF2D1B0E)
+val SuccessContainer = Color(0xFF0D2E1A)
+val Warning = Color(0xFFF59E0B)
+val WarningContainer = Color(0xFF2E220A)
 val Error = Color(0xFFEF4444)
-val ErrorContainer = Color(0xFF2D1215)
+val ErrorContainer = Color(0xFF2E1014)
+
+// Glass / Translucent
+val GlassWhite = Color(0x14FFFFFF)
+val GlassWhiteStrong = Color(0x1AFFFFFF)
+val GlassViolet = Color(0x0D7C5CFC)
+val GlassBlurple = Color(0x0D5865F2)
+
+// Shadows
+val ShadowDark = Color(0x40000000)
+val ShadowViolet = Color(0x207C5CFC)
 
 // Gradients
-val GradientPrimary = listOf(Primary, Secondary)
-val GradientSurface = listOf(Surface, SurfaceElevated)
-val GradientCard = listOf(Surface, Background)
-
-// Overlays
-val OverlayLight = Color(0x0DFFFFFF)
-val OverlayMedium = Color(0x1AFFFFFF)
-val OverlayHeavy = Color(0x33FFFFFF)
-
-// Legacy Discord colors for compatibility
-val DiscordDark = Surface
-val DiscordDarker = Background
-val DiscordMid = SurfaceBorder
-val DiscordLight = SurfaceElevated
-val DiscordText = TextPrimary
-val DiscordTextMuted = TextSecondary
-val DiscordTextFaint = TextTertiary
-val DiscordBlurple = Primary
-val DiscordBlurpleDark = PrimaryDark
-val DiscordGreen = Success
-val DiscordYellow = Warning
-val DiscordRed = Error
-val DiscordFuchsia = Color(0xFFEB459E)
-
-val DiscordLightBg = Color(0xFFFFFFFF)
-val DiscordLightSurface = Color(0xFFF2F3F5)
-val DiscordLightMid = Color(0xFFE3E5E8)
-val DiscordLightText = Color(0xFF060607)
-val DiscordLightTextMuted = Color(0xFF5C5E66)
-
-val GradientStart = Primary
-val GradientEnd = Secondary
+val GradientGold = listOf(Gold, GoldLight)
+val GradientGoldDark = listOf(GoldDark, Gold)
+val GradientBlurple = listOf(Blurple, BlurpleLight)
+val GradientDark = listOf(SurfaceDark, SurfaceMid)
+val GradientCard = listOf(SurfaceCard, SurfaceLight)
+val GradientText = listOf(Gold, Blurple)

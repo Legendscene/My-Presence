@@ -18,6 +18,8 @@ espressoCore = "3.7.0"
 coil = "3.2.0"
 splashScreen = "1.0.1"
 googlePlayServicesAuth = "21.3.0"
+securityCrypto = "1.1.0-alpha06"
+browser = "1.8.0"
 
 [libraries]
 # Core
@@ -61,6 +63,7 @@ ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.r
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", version.ref = "ktor" }
+okhttp-dnsoverhttps = { group = "com.squareup.okhttp3", name = "okhttp-dnsoverhttps", version = "4.12.0" }
 
 # WorkManager
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
@@ -80,6 +83,12 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 
 # Google Sign-In
 google-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googlePlayServicesAuth" }
+
+# Security
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
+# Browser (Chrome Custom Tabs)
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

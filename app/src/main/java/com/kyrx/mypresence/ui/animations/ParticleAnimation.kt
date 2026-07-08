@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.kyrx.mypresence.ui.theme.Primary
-import com.kyrx.mypresence.ui.theme.Secondary
+import com.kyrx.mypresence.ui.theme.Blurple
+import com.kyrx.mypresence.ui.theme.Cyan
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -23,7 +23,7 @@ import kotlin.math.sin
 fun ParticleAnimation(
     modifier: Modifier = Modifier,
     particleCount: Int = 30,
-    colors: List<Color> = listOf(Primary, Secondary)
+    colors: List<Color> = listOf(Blurple, Cyan)
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "particles")
 

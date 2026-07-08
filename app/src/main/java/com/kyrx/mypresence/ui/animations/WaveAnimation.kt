@@ -13,13 +13,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import com.kyrx.mypresence.ui.theme.Primary
+import com.kyrx.mypresence.ui.theme.Blurple
 import kotlin.math.sin
 
 @Composable
 fun WaveAnimation(
     modifier: Modifier = Modifier,
-    color: Color = Primary,
+    color: Color = Blurple,
     waveCount: Int = 3
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "wave")

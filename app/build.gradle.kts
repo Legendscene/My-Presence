@@ -27,6 +27,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -49,6 +52,12 @@ android {
 
     room {
         schemaDirectory("$projectDir/schemas")
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -94,6 +103,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.websockets)
+    implementation(libs.okhttp.dnsoverhttps)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
@@ -103,18 +113,18 @@ dependencies {
     // Splash Screen
     implementation(libs.androidx.core.splashscreen)
 
-    // Google Sign-In
-    implementation(libs.google.play.services.auth)
+    // Security (EncryptedSharedPreferences)
+    implementation(libs.androidx.security.crypto)
 
     // Chrome Custom Tabs (for Discord OAuth)
-    implementation("androidx.browser:browser:1.7.0")
+    implementation(libs.androidx.browser)
+
+    // Google Sign-In
+    implementation(libs.google.play.services.auth)
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-config-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
 
     // Coil
     implementation(libs.coil.compose)

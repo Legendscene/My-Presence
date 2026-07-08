@@ -4,14 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.room.Room
+import com.kyrx.mypresence.core.network.DnsProvider
 import com.kyrx.mypresence.data.local.PresenceDatabase
 import com.kyrx.mypresence.data.remote.DiscordApi
+import com.kyrx.mypresence.data.remote.DiscordGateway
 import com.kyrx.mypresence.data.repository.AuthRepositoryImpl
-import com.kyrx.mypresence.data.repository.GoogleAuthRepositoryImpl
 import com.kyrx.mypresence.data.repository.PreferencesRepositoryImpl
 import com.kyrx.mypresence.domain.repository.AuthRepository
-import com.kyrx.mypresence.domain.repository.GoogleAuthRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
 import dagger.Binds
 import dagger.Module
@@ -22,9 +21,10 @@ import dagger.hilt.components.SingletonComponent
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mypresence_prefs")
@@ -41,16 +41,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideRoomDatabase(@ApplicationContext context: Context): PresenceDatabase {
-        return Room.databaseBuilder(
-            context,
-            PresenceDatabase::class.java,
-            "mypresence_db"
-        ).build()
-    }
-
-    @Provides
-    @Singleton
     fun provideJson(): Json {
         return Json {
             ignoreUnknownKeys = true
@@ -61,12 +51,31 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideHttpClient(json: Json): HttpClient {
+    fun provideOkHttpClient(dns: DnsProvider): OkHttpClient {
+        return OkHttpClient.Builder()
+            .dns(dns)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .pingInterval(20, TimeUnit.SECONDS)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideHttpClient(json: Json, dns: DnsProvider): HttpClient {
         return HttpClient(OkHttp) {
+            engine {
+                config {
+                    this.dns(dns)
+                    addInterceptor { chain ->
+                        chain.proceed(chain.request().newBuilder()
+                            .header("User-Agent", "MyPresence/1.0 (Android)")
+                            .build())
+                    }
+                }
+            }
             install(ContentNegotiation) {
                 json(json)
             }
-            install(WebSockets)
         }
     }
 
@@ -74,6 +83,12 @@ object AppModule {
     @Singleton
     fun provideDiscordApi(httpClient: HttpClient, json: Json): DiscordApi {
         return DiscordApi(httpClient, json)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDiscordGateway(json: Json, okHttpClient: OkHttpClient): DiscordGateway {
+        return DiscordGateway(json, okHttpClient)
     }
 }
 
@@ -88,8 +103,4 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindGoogleAuthRepository(impl: GoogleAuthRepositoryImpl): GoogleAuthRepository
 }
