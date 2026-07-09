@@ -51,7 +51,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="discord-1523344734901370930" />
+                    android:scheme="discord-${discordClientId}" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

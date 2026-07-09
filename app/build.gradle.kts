@@ -24,6 +24,19 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val secretsFile = rootProject.file("secrets.properties")
+        val discordClientId = if (secretsFile.exists()) {
+            secretsFile.readLines().firstOrNull { it.startsWith("DISCORD_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
+        } else ""
+        val googleWebClientId = if (secretsFile.exists()) {
+            secretsFile.readLines().firstOrNull { it.startsWith("GOOGLE_WEB_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
+        } else ""
+
+        buildConfigField("String", "DISCORD_CLIENT_ID", "\"$discordClientId\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+
+        manifestPlaceholders["discordClientId"] = discordClientId
     }
 
     buildTypes {
