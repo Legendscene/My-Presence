@@ -11,23 +11,35 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.kyrx.mypresence.MainActivity
 import com.kyrx.mypresence.R
-import com.kyrx.mypresence.data.remote.DiscordGateway
+import com.kyrx.mypresence.core.analytics.CrashReporter
 import com.kyrx.mypresence.core.gateway.GatewayConnectionState
+import com.kyrx.mypresence.domain.model.AppInfo
+import com.kyrx.mypresence.domain.repository.AppRepository
+import com.kyrx.mypresence.domain.repository.GatewayRepository
+import com.kyrx.mypresence.domain.repository.PreferencesRepository
+import com.kyrx.mypresence.domain.usecase.UpdatePresenceUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class PresenceService : Service() {
 
-    @Inject lateinit var discordGateway: DiscordGateway
+    @Inject lateinit var gatewayRepository: GatewayRepository
+    @Inject lateinit var appRepository: AppRepository
+    @Inject lateinit var preferencesRepository: PreferencesRepository
+    @Inject lateinit var updatePresence: UpdatePresenceUseCase
+    @Inject lateinit var crashReporter: CrashReporter
 
     companion object {
         const val CHANNEL_ID = "presence_service"
@@ -37,6 +49,7 @@ class PresenceService : Service() {
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var syncJob: Job? = null
 
     private val _connectionState = MutableStateFlow<GatewayConnectionState>(GatewayConnectionState.Disconnected)
     val connectionState: StateFlow<GatewayConnectionState> = _connectionState.asStateFlow()
@@ -50,8 +63,8 @@ class PresenceService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
-            ACTION_START -> startPresence()
             ACTION_STOP -> stopPresence()
+            else -> startPresence()
         }
         return START_STICKY
     }
@@ -59,29 +72,79 @@ class PresenceService : Service() {
     override fun onBind(intent: Intent): IBinder? = null
 
     private fun startPresence() {
+        crashReporter.log("PresenceService startPresence")
         val notification = buildNotification("My Presence is active")
-        try { startForeground(NOTIFICATION_ID, notification) } catch (_: Exception) {}
+        try { startForeground(NOTIFICATION_ID, notification) } catch (_: Exception) {
+            crashReporter.logNonFatal(Exception("startForeground failed"))
+        }
+        serviceScope.launch {
+            preferencesRepository.setPresenceEnabled(true)
+            if (gatewayRepository.state.value !is GatewayConnectionState.Connected &&
+                gatewayRepository.state.value !is GatewayConnectionState.Connecting &&
+                gatewayRepository.state.value !is GatewayConnectionState.Authenticating
+            ) {
+                gatewayRepository.connect()
+            }
+        }
+        startPresenceSync()
     }
 
     private fun observeGatewayState() {
         serviceScope.launch {
-            discordGateway.state.collect { state ->
+            gatewayRepository.state.collect { state ->
                 _connectionState.value = state
                 val notificationText = when (state) {
                     is GatewayConnectionState.Connected -> "Presence active"
                     is GatewayConnectionState.Connecting -> "Connecting..."
+                    is GatewayConnectionState.Authenticating -> "Authenticating..."
+                    is GatewayConnectionState.Resuming -> "Resuming session..."
+                    is GatewayConnectionState.Reconnecting -> "Reconnecting..."
                     is GatewayConnectionState.Disconnected -> "Disconnected"
-                    is GatewayConnectionState.Error -> "Error: ${state.message}"
+                    is GatewayConnectionState.HeartbeatLost -> "Connection unstable"
+                    is GatewayConnectionState.RateLimited -> "Rate limited"
+                    is GatewayConnectionState.InvalidSession -> "Session invalid"
+                    is GatewayConnectionState.Unauthorized -> "Auth required"
+                    is GatewayConnectionState.FatalError -> "Connection error"
                 }
                 updateNotification(notificationText)
+                if (state is GatewayConnectionState.Connected) {
+                    delay(1000)
+                    sendCurrentPresence(appRepository.foregroundApp.value, "gateway-connected")
+                }
             }
         }
     }
 
     private fun stopPresence() {
-        discordGateway.disconnect()
+        syncJob?.cancel()
+        syncJob = null
+        gatewayRepository.disconnect()
+        serviceScope.launch { preferencesRepository.setPresenceEnabled(false) }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun startPresenceSync() {
+        if (syncJob?.isActive == true) return
+        syncJob = serviceScope.launch {
+            appRepository.foregroundApp.collect { app ->
+                sendCurrentPresence(app, "foreground-change")
+            }
+        }
+    }
+
+    private suspend fun sendCurrentPresence(foreground: AppInfo?, source: String) {
+        val enabled = preferencesRepository.presenceEnabled.first()
+        if (!enabled || gatewayRepository.state.value !is GatewayConnectionState.Connected) return
+
+        val enabledApps = preferencesRepository.enabledApps.first()
+        val appForPresence = foreground?.takeIf { it.packageName in enabledApps }
+
+        if (appForPresence != null) {
+            updatePresence(appForPresence)
+        } else {
+            gatewayRepository.clearPresence()
+        }
     }
 
     private fun createNotificationChannel() {
@@ -124,7 +187,8 @@ class PresenceService : Service() {
     }
 
     override fun onDestroy() {
-        stopPresence()
+        syncJob?.cancel()
+        gatewayRepository.disconnect()
         serviceScope.cancel()
         super.onDestroy()
     }
