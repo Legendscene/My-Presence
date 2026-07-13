@@ -1,6 +1,5 @@
 package com.kyrx.mypresence.domain.usecase
 
-import android.util.Log
 import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.domain.model.AppInfo
 import com.kyrx.mypresence.domain.model.PresenceData
@@ -17,11 +16,7 @@ class UpdatePresenceUseCase @Inject constructor(
     private val gatewayRepository: GatewayRepository,
     private val assetRepository: AssetRepository
 ) {
-    private var activePresenceKey: String? = null
-    private var activeStartedAtMs: Long? = null
-
     suspend operator fun invoke(detectedApp: AppInfo?) {
-        Log.i("PRESENCE_TRACE", "USECASE_ENTRY: detectedApp=${detectedApp?.packageName} appName=${detectedApp?.appName} thread=${Thread.currentThread().id} hash=${detectedApp?.hashCode()}")
         val appConfigs = preferencesRepository.appPresenceConfigs.first()
         val customPresence = preferencesRepository.customPresence.first()
 
@@ -29,9 +24,8 @@ class UpdatePresenceUseCase @Inject constructor(
         val details: String
         val state: String
         val activityType: Int
-        val presenceKey: String
-        val explicitStartTimestamp: Long?
-        val explicitEndTimestamp: Long?
+        val startTimestamp: Long?
+        val endTimestamp: Long?
         val status: String
         val largeImage: String
         val largeText: String
@@ -59,9 +53,8 @@ class UpdatePresenceUseCase @Inject constructor(
                 state = defaultStateFor(detectedApp)
                 activityType = defaultActivityTypeFor(detectedApp.packageName)
             }
-            presenceKey = "app:${detectedApp.packageName}:$name:$details:$state:$activityType"
-            explicitStartTimestamp = null
-            explicitEndTimestamp = null
+            startTimestamp = System.currentTimeMillis()
+            endTimestamp = null
             status = "online"
 
             val userToken = preferencesRepository.userToken.first()
@@ -94,9 +87,8 @@ class UpdatePresenceUseCase @Inject constructor(
             details = customPresence.details.ifBlank { "Using My Presence" }
             state = customPresence.state
             activityType = customPresence.type
-            presenceKey = "custom:$name:$details:$state:$activityType:${customPresence.largeImage}:${customPresence.smallImage}:${customPresence.button1Label}:${customPresence.button2Label}"
-            explicitStartTimestamp = customPresence.startTimestamp
-            explicitEndTimestamp = customPresence.endTimestamp
+            startTimestamp = customPresence.startTimestamp ?: System.currentTimeMillis()
+            endTimestamp = customPresence.endTimestamp
             status = customPresence.status.ifBlank { "online" }
             largeImage = customPresence.largeImage
             largeText = customPresence.largeText
@@ -112,12 +104,6 @@ class UpdatePresenceUseCase @Inject constructor(
             streamUrl = customPresence.streamUrl
         }
 
-        val now = System.currentTimeMillis()
-        if (activePresenceKey != presenceKey || activeStartedAtMs == null) {
-            activePresenceKey = presenceKey
-            activeStartedAtMs = now
-        }
-
         val presence = PresenceData(
             name = name,
             details = details,
@@ -129,8 +115,8 @@ class UpdatePresenceUseCase @Inject constructor(
             largeText = largeText,
             smallImage = smallImage,
             smallText = smallText,
-            startTimestamp = explicitStartTimestamp ?: activeStartedAtMs,
-            endTimestamp = explicitEndTimestamp,
+            startTimestamp = startTimestamp,
+            endTimestamp = endTimestamp,
             button1Label = button1Label,
             button1Url = button1Url,
             button2Label = button2Label,
