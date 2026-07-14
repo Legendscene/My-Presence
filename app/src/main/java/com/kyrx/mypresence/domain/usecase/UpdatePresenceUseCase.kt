@@ -72,9 +72,9 @@ class UpdatePresenceUseCase @Inject constructor(
                 null
             }
             needsAssetRetry = mpKey.isNullOrBlank()
-            largeImage = mpKey.orEmpty()
-            largeText = if (mpKey.isNullOrBlank()) "" else "My Presence app"
-            largeUrl = if (mpKey.isNullOrBlank()) "" else Constants.GITHUB_REPO_URL
+            largeImage = if (!mpKey.isNullOrBlank()) mpKey else "icon"
+            largeText = if (!mpKey.isNullOrBlank()) "My Presence app" else detectedApp.appName
+            largeUrl = if (!mpKey.isNullOrBlank()) Constants.GITHUB_REPO_URL else ""
             smallImage = ""
             smallText = ""
 
