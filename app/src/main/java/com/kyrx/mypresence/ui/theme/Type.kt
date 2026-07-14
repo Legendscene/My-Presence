@@ -8,103 +8,83 @@ import androidx.compose.ui.unit.sp
 
 val Typography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W700,
         fontSize = 36.sp,
         lineHeight = 44.sp,
         letterSpacing = (-0.5).sp
     ),
     displayMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W700,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = (-0.25).sp
+        fontWeight = FontWeight.W600,
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
+        letterSpacing = 0.sp
     ),
     displaySmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W700,
-        fontSize = 28.sp,
-        lineHeight = 36.sp
+        fontWeight = FontWeight.W600,
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+        letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W600,
-        fontSize = 26.sp,
-        lineHeight = 34.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W600,
         fontSize = 22.sp,
-        lineHeight = 30.sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W600,
-        fontSize = 20.sp,
         lineHeight = 28.sp
     ),
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
+    headlineMedium = TextStyle(
+        fontWeight = FontWeight.W600,
+        fontSize = 20.sp,
+        lineHeight = 26.sp
+    ),
+    headlineSmall = TextStyle(
+        fontWeight = FontWeight.W600,
         fontSize = 18.sp,
-        lineHeight = 26.sp,
-        letterSpacing = 0.25.sp
+        lineHeight = 24.sp
+    ),
+    titleLarge = TextStyle(
+        fontWeight = FontWeight.W600,
+        fontSize = 17.sp,
+        lineHeight = 22.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
+        fontSize = 15.sp,
+        lineHeight = 20.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        fontWeight = FontWeight.W600,
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W400,
         fontSize = 16.sp,
-        lineHeight = 26.sp,
-        letterSpacing = 0.5.sp
+        lineHeight = 24.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W400,
         fontSize = 14.sp,
-        lineHeight = 22.sp,
-        letterSpacing = 0.25.sp
+        lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W400,
         fontSize = 12.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.4.sp
+        lineHeight = 16.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.25.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 0.25.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W500,
-        fontSize = 11.sp,
+        fontSize = 10.sp,
         lineHeight = 14.sp,
         letterSpacing = 0.5.sp
     )

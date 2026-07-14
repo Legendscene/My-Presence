@@ -2,15 +2,27 @@ package com.kyrx.mypresence.core.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import okio.Path.Companion.toOkioPath
+import com.kyrx.mypresence.core.analytics.CrashReporter
+import com.kyrx.mypresence.core.di.dataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+import com.kyrx.mypresence.core.gateway.GatewayConfig
+import com.kyrx.mypresence.core.gateway.GatewayEngine
 import com.kyrx.mypresence.core.network.DnsProvider
-import com.kyrx.mypresence.data.local.PresenceDatabase
+import com.kyrx.mypresence.data.gateway.DiscordGatewayEngine
+import com.kyrx.mypresence.data.gateway.GatewayRepositoryImpl
 import com.kyrx.mypresence.data.remote.DiscordApi
-import com.kyrx.mypresence.data.remote.DiscordGateway
+import com.kyrx.mypresence.data.repository.AppRepositoryImpl
+import com.kyrx.mypresence.data.repository.AssetRepositoryImpl
 import com.kyrx.mypresence.data.repository.AuthRepositoryImpl
 import com.kyrx.mypresence.data.repository.PreferencesRepositoryImpl
+import com.kyrx.mypresence.domain.repository.AppRepository
+import com.kyrx.mypresence.domain.repository.AssetRepository
 import com.kyrx.mypresence.domain.repository.AuthRepository
+import com.kyrx.mypresence.domain.repository.GatewayRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
 import dagger.Binds
 import dagger.Module
@@ -26,8 +38,6 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
-
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mypresence_prefs")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -81,14 +91,46 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDiscordApi(httpClient: HttpClient, json: Json): DiscordApi {
-        return DiscordApi(httpClient, json)
+    fun provideDiscordApi(httpClient: HttpClient, json: Json, crashReporter: CrashReporter): DiscordApi {
+        return DiscordApi(httpClient, json, crashReporter)
     }
 
     @Provides
     @Singleton
-    fun provideDiscordGateway(json: Json, okHttpClient: OkHttpClient): DiscordGateway {
-        return DiscordGateway(json, okHttpClient)
+    fun provideGatewayConfig(): GatewayConfig {
+        return GatewayConfig()
+    }
+
+    @Provides
+    @Singleton
+    fun provideImageLoader(
+        @ApplicationContext context: Context,
+    ): ImageLoader {
+        return ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image-cache").toOkioPath())
+                    .maxSizeBytes(50L * 1024 * 1024)
+                    .build()
+            }
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideGatewayEngine(
+        json: Json,
+        okHttpClient: OkHttpClient,
+        crashReporter: CrashReporter,
+        discordApi: DiscordApi,
+        config: GatewayConfig
+    ): GatewayEngine {
+        return DiscordGatewayEngine(json, okHttpClient, crashReporter, discordApi, config)
     }
 }
 
@@ -103,4 +145,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAppRepository(impl: AppRepositoryImpl): AppRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindGatewayRepository(impl: GatewayRepositoryImpl): GatewayRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAssetRepository(impl: AssetRepositoryImpl): AssetRepository
 }

@@ -1,10 +1,16 @@
 package com.kyrx.mypresence.feature.onboarding
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import android.Manifest
+import android.app.AppOpsManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.PowerManager
+import android.os.Process
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,234 +20,318 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.VideogameAsset
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
-import com.kyrx.mypresence.ui.components.PremiumButton
-import com.kyrx.mypresence.ui.components.PremiumOutlinedButton
+import com.kyrx.mypresence.ui.theme.Accent
 import com.kyrx.mypresence.ui.theme.Background
-import com.kyrx.mypresence.ui.theme.Blurple
-import com.kyrx.mypresence.ui.theme.Cyan
-import com.kyrx.mypresence.ui.theme.Gold
-import com.kyrx.mypresence.ui.theme.GoldLight
-import com.kyrx.mypresence.ui.theme.GradientGold
-import com.kyrx.mypresence.ui.theme.SurfaceMid
+import com.kyrx.mypresence.ui.theme.Dimens
+import com.kyrx.mypresence.ui.theme.Success
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
-import com.kyrx.mypresence.ui.theme.TextTertiary
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private data class OnboardingPage(
-    val icon: ImageVector,
+data class PermissionItem(
     val title: String,
-    val description: String
-)
-
-private val pages = listOf(
-    OnboardingPage(
-        icon = Icons.Filled.VideogameAsset,
-        title = "Welcome to My Presence",
-        description = "Show your Discord Rich Presence right from your Android device. Stay connected with style."
-    ),
-    OnboardingPage(
-        icon = Icons.Filled.Speed,
-        title = "Real-Time Presence",
-        description = "Your activity, status, and mood — updated in real time on Discord. Fast and reliable."
-    ),
-    OnboardingPage(
-        icon = Icons.Filled.Security,
-        title = "Secure by Design",
-        description = "OAuth2 with PKCE. Encrypted storage. Certificate pinning. Your data stays yours."
-    ),
-    OnboardingPage(
-        icon = Icons.Filled.Bolt,
-        title = "Lightweight & Fast",
-        description = "Optimized for performance. Smooth animations. Minimal battery usage."
-    )
+    val description: String,
+    val icon: ImageVector,
+    val isGranted: Boolean
 )
 
 @Composable
 fun OnboardingScreen(
-    onOnboardingComplete: () -> Unit,
-    preferencesRepository: PreferencesRepository?
+    preferencesRepository: PreferencesRepository,
+    onComplete: () -> Unit
 ) {
-    var visible by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val context = LocalContext.current
+    var usageStatsGranted by remember { mutableStateOf(checkUsageStats(context)) }
+    var batteryOptGranted by remember { mutableStateOf(checkBatteryOpt(context)) }
+    var notificationGranted by remember { mutableStateOf(checkNotification(context)) }
 
-    LaunchedEffect(Unit) { visible = true }
+    val allGranted = usageStatsGranted && batteryOptGranted && notificationGranted
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage == pages.size - 1) {
-            delay(5000)
-        }
+    val usageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        usageStatsGranted = checkUsageStats(context)
     }
 
-    Column(
+    val batteryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        batteryOptGranted = checkBatteryOpt(context)
+    }
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationGranted = granted
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
-            .padding(32.dp)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(Dimens.lg),
+        contentAlignment = Alignment.Center
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-
-        if (pagerState.currentPage < pages.size - 1) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimens.lg)
+        ) {
             Text(
-                text = "Skip",
-                color = TextTertiary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.W500,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SurfaceMid.copy(alpha = 0.5f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                text = "Get Started",
+                style = MaterialTheme.typography.headlineMedium,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold
             )
-        } else {
-            Spacer(modifier = Modifier.height(36.dp))
-        }
+            Text(
+                text = "My Presence needs a few permissions to run reliably",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
 
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) { pageIndex ->
-            val page = pages[pageIndex]
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) +
-                        slideInVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(GoldLight, Gold)
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = page.icon,
-                            contentDescription = null,
-                            tint = Background,
-                            modifier = Modifier.size(56.dp)
+            Spacer(Modifier.height(Dimens.md))
+
+            PermissionRow(
+                title = "Usage Access",
+                description = "Detect which app you're currently using",
+                icon = Icons.Filled.Visibility,
+                isGranted = usageStatsGranted,
+                onClick = {
+                    usageLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+            )
+
+            PermissionRow(
+                title = "Ignore Battery Optimization",
+                description = "Keep the connection alive in background",
+                icon = Icons.Filled.Info,
+                isGranted = batteryOptGranted,
+                onClick = {
+                    batteryLauncher.launch(
+                        Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            android.net.Uri.parse("package:${context.packageName}")
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    Text(
-                        text = page.title,
-                        color = TextPrimary,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.W700,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = page.description,
-                        color = TextSecondary,
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 26.sp
                     )
                 }
-            }
-        }
+            )
 
-        // Page Indicators
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            repeat(pages.size) { index ->
-                val isSelected = pagerState.currentPage == index
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(width = if (isSelected) 28.dp else 8.dp, height = 8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .then(
-                            if (isSelected) Modifier.background(
-                                Brush.horizontalGradient(GradientGold),
-                                RoundedCornerShape(4.dp)
-                            ) else Modifier.background(
-                                TextTertiary.copy(alpha = 0.3f),
-                                RoundedCornerShape(4.dp)
-                            )
-                        )
+            PermissionRow(
+                title = "Notifications",
+                description = "Required for persistent foreground service",
+                icon = Icons.Filled.Notifications,
+                isGranted = notificationGranted,
+                onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        notificationGranted = true
+                    }
+                }
+            )
+
+            PermissionRow(
+                title = "Foreground Service",
+                description = "Runs automatically when presence is active",
+                icon = Icons.Filled.PlayArrow,
+                isGranted = true,
+                onClick = {}
+            )
+
+            PermissionRow(
+                title = "Auto Start (OEM)",
+                description = "Open system settings to enable (optional)",
+                icon = Icons.Filled.Build,
+                isGranted = true,
+                onClick = {
+                    openAutoStartSettings(context)
+                }
+            )
+
+            Spacer(Modifier.height(Dimens.lg))
+
+            Button(
+                onClick = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        preferencesRepository.setOnboardingCompleted(true)
+                    }
+                    onComplete()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(Dimens.md),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (allGranted) Accent else Accent.copy(alpha = 0.5f)
+                )
+            ) {
+                Text(
+                    text = if (allGranted) "Start Using My Presence" else "Skip for now",
+                    color = Color.White,
+                    fontWeight = FontWeight.W600,
+                    fontSize = 16.sp
+                )
+            }
+
+            if (!allGranted) {
+                Text(
+                    text = "You can enable permissions later in Settings",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
                 )
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Action Buttons
-        if (pagerState.currentPage < pages.size - 1) {
-            PremiumButton(
-                text = "Next",
-                onClick = {
-                    scope.launch {
-                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                gradient = GradientGold
+@Composable
+private fun PermissionRow(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    isGranted: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (isGranted) Success.copy(alpha = 0.08f) else Color.Transparent,
+                RoundedCornerShape(Dimens.sm)
             )
-        } else {
-            PremiumButton(
-                text = "Get Started",
-                onClick = {
-                    scope.launch {
-                        preferencesRepository?.setOnboardingCompleted(true)
-                        onOnboardingComplete()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                gradient = GradientGold
+            .padding(Dimens.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isGranted) Success else TextSecondary,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.width(Dimens.md))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontWeight = FontWeight.W600,
+                fontSize = 15.sp
+            )
+            Text(
+                text = description,
+                color = TextSecondary,
+                fontSize = 13.sp
             )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        if (!isGranted) {
+            Button(
+                onClick = onClick,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("Grant", fontSize = 12.sp)
+            }
+        } else {
+            Text(
+                text = "Granted",
+                color = Success,
+                fontWeight = FontWeight.W600,
+                fontSize = 13.sp
+            )
+        }
     }
+}
+
+private fun checkUsageStats(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+    val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        appOps.unsafeCheckOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            context.packageName
+        )
+    } else {
+        appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            context.packageName
+        )
+    }
+    return mode == AppOpsManager.MODE_ALLOWED
+}
+
+private fun checkBatteryOpt(context: Context): Boolean {
+    val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+    return pm.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+private fun checkNotification(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    } else true
+}
+
+private fun checkAutoStart(context: Context): Boolean {
+    return try {
+        val pm = context.packageManager
+        pm.getLaunchIntentForPackage("com.miui.securitycenter") != null
+    } catch (_: Exception) { false }
+}
+
+private fun openAutoStartSettings(context: Context) {
+    val intents = listOf(
+        Intent().apply {
+            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            data = android.net.Uri.parse("package:${context.packageName}")
+        }
+    )
+    try {
+        context.startActivity(intents[0])
+    } catch (_: Exception) {}
 }

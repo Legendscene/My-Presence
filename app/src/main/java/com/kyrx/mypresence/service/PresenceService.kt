@@ -13,8 +13,10 @@ import com.kyrx.mypresence.MainActivity
 import com.kyrx.mypresence.R
 import com.kyrx.mypresence.core.analytics.CrashReporter
 import com.kyrx.mypresence.core.gateway.GatewayConnectionState
+import com.kyrx.mypresence.core.utils.Constants
 import com.kyrx.mypresence.domain.model.AppInfo
 import com.kyrx.mypresence.domain.repository.AppRepository
+import com.kyrx.mypresence.domain.repository.AssetRepository
 import com.kyrx.mypresence.domain.repository.GatewayRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
 import com.kyrx.mypresence.domain.usecase.UpdatePresenceUseCase
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,6 +40,7 @@ class PresenceService : Service() {
 
     @Inject lateinit var gatewayRepository: GatewayRepository
     @Inject lateinit var appRepository: AppRepository
+    @Inject lateinit var assetRepository: AssetRepository
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var updatePresence: UpdatePresenceUseCase
     @Inject lateinit var crashReporter: CrashReporter
@@ -50,6 +54,11 @@ class PresenceService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
+    private var resendJob: Job? = null
+    private var assetWarmupJob: Job? = null
+    private var assetRetryJob: Job? = null
+    private var lastPresenceKey: String? = null
+    private var lastPresenceSentMs: Long = 0L
 
     private val _connectionState = MutableStateFlow<GatewayConnectionState>(GatewayConnectionState.Disconnected)
     val connectionState: StateFlow<GatewayConnectionState> = _connectionState.asStateFlow()
@@ -87,6 +96,7 @@ class PresenceService : Service() {
             }
         }
         startPresenceSync()
+        startAssetWarmup()
     }
 
     private fun observeGatewayState() {
@@ -117,7 +127,14 @@ class PresenceService : Service() {
 
     private fun stopPresence() {
         syncJob?.cancel()
+        resendJob?.cancel()
+        assetWarmupJob?.cancel()
+        assetRetryJob?.cancel()
         syncJob = null
+        resendJob = null
+        assetWarmupJob = null
+        assetRetryJob = null
+        lastPresenceKey = null
         gatewayRepository.disconnect()
         serviceScope.launch { preferencesRepository.setPresenceEnabled(false) }
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -131,19 +148,99 @@ class PresenceService : Service() {
                 sendCurrentPresence(app, "foreground-change")
             }
         }
+        resendJob?.cancel()
+        resendJob = serviceScope.launch {
+            while (isActive) {
+                delay(30_000)
+                sendCurrentPresence(appRepository.foregroundApp.value, "periodic-resend", force = true)
+            }
+        }
     }
 
-    private suspend fun sendCurrentPresence(foreground: AppInfo?, source: String) {
+    private fun startAssetWarmup() {
+        if (assetWarmupJob?.isActive == true) return
+        assetWarmupJob = serviceScope.launch {
+            val token = preferencesRepository.userToken.first()
+            if (token.isBlank() || Constants.RPC_APPLICATION_ID.isBlank()) return@launch
+
+            var attempts = 0
+            while (appRepository.installedApps.value.isEmpty() && attempts < 20 && isActive) {
+                delay(250)
+                attempts++
+            }
+
+            val installed = appRepository.installedApps.value
+            val priorityPackages = listOf(
+                "com.whatsapp",
+                "com.google.android.apps.nbu.paisa.user",
+                "com.instagram.android",
+                "com.spotify.music",
+                "com.google.android.youtube",
+                "org.telegram.messenger",
+                "com.snapchat.android",
+                "com.twitter.android",
+                "com.discord",
+                "com.google.android.gm"
+            )
+            val priority = priorityPackages.mapNotNull { pkg ->
+                installed.firstOrNull { it.packageName == pkg }
+            }
+            val rest = installed
+                .filterNot { app -> priority.any { it.packageName == app.packageName } }
+                .take(40)
+
+            (priority + rest).distinctBy { it.packageName }.forEachIndexed { index, app ->
+                if (!isActive) return@forEachIndexed
+                crashReporter.log("Asset warmup ${index + 1}: ${app.packageName}")
+                assetRepository.resolveAppIcon(
+                    packageName = app.packageName,
+                    appName = app.appName,
+                    userToken = token,
+                    applicationId = Constants.RPC_APPLICATION_ID
+                )
+                delay(350)
+            }
+        }
+    }
+
+    private suspend fun sendCurrentPresence(foreground: AppInfo?, source: String, force: Boolean = false) {
         val enabled = preferencesRepository.presenceEnabled.first()
         if (!enabled || gatewayRepository.state.value !is GatewayConnectionState.Connected) return
 
-        val enabledApps = preferencesRepository.enabledApps.first()
-        val appForPresence = foreground?.takeIf { it.packageName in enabledApps }
+        val appForPresence = foreground
+        if (appForPresence == null) {
+            if (lastPresenceKey != null || force) {
+                crashReporter.log("PresenceService clear source=$source")
+                gatewayRepository.clearPresence()
+                lastPresenceKey = null
+                lastPresenceSentMs = System.currentTimeMillis()
+                assetRetryJob?.cancel()
+            }
+            return
+        }
 
-        if (appForPresence != null) {
-            updatePresence(appForPresence)
+        val key = "app:${appForPresence.packageName}"
+        val now = System.currentTimeMillis()
+        if (!force && key == lastPresenceKey && now - lastPresenceSentMs < 2_500L) return
+
+        crashReporter.log("PresenceService send source=$source key=$key")
+        val sent = updatePresence(appForPresence)
+        if (sent) {
+            lastPresenceKey = key
+            lastPresenceSentMs = now
+            assetRetryJob?.cancel()
         } else {
-            gatewayRepository.clearPresence()
+            scheduleAssetRetry(appForPresence)
+        }
+    }
+
+    private fun scheduleAssetRetry(app: AppInfo) {
+        assetRetryJob?.cancel()
+        assetRetryJob = serviceScope.launch {
+            delay(3_000)
+            if (appRepository.foregroundApp.value?.packageName == app.packageName) {
+                sendCurrentPresence(app, "asset-retry", force = true)
+            }
         }
     }
 
@@ -188,6 +285,9 @@ class PresenceService : Service() {
 
     override fun onDestroy() {
         syncJob?.cancel()
+        resendJob?.cancel()
+        assetWarmupJob?.cancel()
+        assetRetryJob?.cancel()
         gatewayRepository.disconnect()
         serviceScope.cancel()
         super.onDestroy()

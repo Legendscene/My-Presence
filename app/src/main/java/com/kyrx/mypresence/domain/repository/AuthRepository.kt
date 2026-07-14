@@ -22,11 +22,22 @@ interface AuthRepository {
     fun prepareAuthorization(): PendingAuthParams
     fun consumePendingParams(): PendingAuthParams?
     suspend fun handleAuthorizationResponse(code: String, expectedState: String, codeVerifier: String): Result<DiscordUser>
+    suspend fun loginWithToken(userToken: String): DiscordUser
     suspend fun loadCurrentUser(): DiscordUser?
     suspend fun refreshAccessToken(): Boolean
     suspend fun logout()
     fun getAccessToken(): String?
+    fun getUserToken(): String?
     fun isTokenExpired(): Boolean
     fun isOAuthInProgress(): Boolean
     fun cancelOAuth()
+    fun getUserIdForCrashReporting(): String?
+    fun getGoogleAccount(): GoogleAccountInfo?
+    suspend fun saveGoogleAccount(idToken: String, displayName: String?, email: String?)
 }
+
+data class GoogleAccountInfo(
+    val idToken: String,
+    val displayName: String?,
+    val email: String?
+)

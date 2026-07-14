@@ -1,20 +1,12 @@
 package com.kyrx.mypresence.feature.auth
 
 import android.app.Application
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import android.util.Log
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.kyrx.mypresence.core.utils.PKCE
 import com.kyrx.mypresence.domain.repository.AuthRepository
 import com.kyrx.mypresence.domain.repository.AuthState
-import com.kyrx.mypresence.domain.usecase.PerformOAuthUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,99 +16,57 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val performOAuth: PerformOAuthUseCase,
     application: Application
 ) : AndroidViewModel(application) {
 
-    val authState: StateFlow<AuthState> = authRepository.authState
+    val authState = authRepository.authState
 
-    private val _isOAuthInProgress = MutableStateFlow(false)
-    val isOAuthInProgress: StateFlow<Boolean> = _isOAuthInProgress.asStateFlow()
+    private val _isLoginInProgress = MutableStateFlow(false)
+    val isLoginInProgress: StateFlow<Boolean> = _isLoginInProgress.asStateFlow()
 
-    private val _oauthError = MutableStateFlow<String?>(null)
-    val oauthError: StateFlow<String?> = _oauthError.asStateFlow()
+    private val _loginError = MutableStateFlow<String?>(null)
+    val loginError: StateFlow<String?> = _loginError.asStateFlow()
 
-    fun startOAuth() {
-        if (_isOAuthInProgress.value) return
-        _oauthError.value = null
-        _isOAuthInProgress.value = true
-        Log.d("AuthViewModel", "Starting OAuth")
+    private val _showMoreOptions = MutableStateFlow(false)
+    val showMoreOptions: StateFlow<Boolean> = _showMoreOptions.asStateFlow()
 
-        val params = authRepository.prepareAuthorization()
-        val challenge = PKCE.generateCodeChallenge(params.codeVerifier)
-        val url = authRepository.buildAuthorizationUrl(params.state, challenge)
+    fun toggleMoreOptions() {
+        _showMoreOptions.value = !_showMoreOptions.value
+    }
 
-        val application = getApplication<Application>()
-        try {
-            CustomTabsIntent.Builder()
-                .setShowTitle(true)
-                .build()
-                .apply {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    launchUrl(application, Uri.parse(url))
-                }
-        } catch (e: ActivityNotFoundException) {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                application.startActivity(intent)
-            } catch (fallbackError: Exception) {
-                Log.e("AuthViewModel", "Browser launch failed: ${fallbackError.message}")
-                _isOAuthInProgress.value = false
-                _oauthError.value = "No browser found to open Discord login."
-                authRepository.cancelOAuth()
-                return
-            }
-        } catch (e: Exception) {
-            Log.e("AuthViewModel", "Custom tab launch failed: ${e.message}")
-            _isOAuthInProgress.value = false
-            _oauthError.value = "Could not open Discord login: ${e.message}"
-            authRepository.cancelOAuth()
-            return
-        }
-
+    fun loginWithToken(token: String) {
+        if (_isLoginInProgress.value) return
+        _loginError.value = null
+        _isLoginInProgress.value = true
         viewModelScope.launch {
             try {
-                Log.d("AuthViewModel", "Waiting for Discord deep-link callback...")
-                val result = performOAuth()
-                if (result.isError) {
-                    _oauthError.value = result.errorMessageOrNull()
-                    authRepository.cancelOAuth()
-                } else {
-                    Log.d("AuthViewModel", "Token exchange done, authState=${authState.value}")
-                }
-            } catch (e: CancellationException) {
-                Log.d("AuthViewModel", "OAuth cancelled")
-            } catch (e: TimeoutCancellationException) {
-                Log.e("AuthViewModel", "OAuth timed out")
-                if (authState.value !is AuthState.Authenticated) {
-                    _oauthError.value = "OAuth timed out. Try again."
-                    authRepository.cancelOAuth()
-                }
+                authRepository.loginWithToken(token.trim())
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "OAuth error: ${e::class.simpleName} - ${e.message}")
-                if (authState.value !is AuthState.Authenticated) {
-                    _oauthError.value = "Error: ${e.message}"
-                    authRepository.cancelOAuth()
-                }
+                Log.e("AuthViewModel", "login failed: ${e.message}")
+                _loginError.value = "Login failed: ${e.message}"
             } finally {
-                _isOAuthInProgress.value = false
-                Log.d("AuthViewModel", "OAuth flow ended")
+                _isLoginInProgress.value = false
             }
         }
     }
 
-    fun cancelOAuth() {
-        Log.d("AuthViewModel", "cancelOAuth called")
-        authRepository.cancelOAuth()
-        _isOAuthInProgress.value = false
-        _oauthError.value = null
+    fun handleGoogleSignIn(idToken: String, displayName: String?, email: String?) {
+        viewModelScope.launch {
+            try {
+                authRepository.saveGoogleAccount(idToken, displayName, email)
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Google sign-in save failed: ${e.message}")
+            }
+        }
     }
 
-    fun getDiscordAccessToken(): String? = authRepository.getAccessToken()
+    fun logout() {
+        viewModelScope.launch {
+            authRepository.logout()
+        }
+    }
 
-    fun clearOAuthError() {
-        _oauthError.value = null
+    fun clearError() {
+        _loginError.value = null
     }
 }

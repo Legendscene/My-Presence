@@ -1,16 +1,17 @@
 package com.kyrx.mypresence.feature.auth
 
+import android.util.Log
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,16 +20,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,193 +44,233 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.kyrx.mypresence.BuildConfig
 import com.kyrx.mypresence.domain.repository.AuthState
-import com.kyrx.mypresence.ui.animation.StaggeredReveal
-import com.kyrx.mypresence.ui.components.AnimatedLogo
-import com.kyrx.mypresence.ui.components.GlassCard
-import com.kyrx.mypresence.ui.components.GradientText
-import com.kyrx.mypresence.ui.icons.DiscordIcon
+import com.kyrx.mypresence.ui.theme.Accent
+import com.kyrx.mypresence.ui.theme.AccentMuted
 import com.kyrx.mypresence.ui.theme.Background
-import com.kyrx.mypresence.ui.theme.Blurple
-import com.kyrx.mypresence.ui.theme.BlurpleLight
-import com.kyrx.mypresence.ui.theme.GlassAppearance
-import com.kyrx.mypresence.ui.theme.Gold
+import com.kyrx.mypresence.ui.theme.Dimens
+import com.kyrx.mypresence.ui.theme.Error
 import com.kyrx.mypresence.ui.theme.SurfaceBorder
-import com.kyrx.mypresence.ui.theme.SurfaceCard
 import com.kyrx.mypresence.ui.theme.TextPrimary
 import com.kyrx.mypresence.ui.theme.TextSecondary
 import com.kyrx.mypresence.ui.theme.TextTertiary
-import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit
+    authViewModel: AuthViewModel,
+    onLoginSuccess: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var visible by remember { mutableStateOf(false) }
-    var showSuccess by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val authState by authViewModel.authState.collectAsState()
+    val isLoginInProgress by authViewModel.isLoginInProgress.collectAsState()
+    val loginError by authViewModel.loginError.collectAsState()
+    val showMoreOptions by authViewModel.showMoreOptions.collectAsState()
+    var showWebView by remember { mutableStateOf(false) }
 
-    val authState by viewModel.authState.collectAsState()
-    val isOAuthInProgress by viewModel.isOAuthInProgress.collectAsState()
-    val oauthError by viewModel.oauthError.collectAsState()
-
-    LaunchedEffect(Unit) { visible = true }
-
-    LaunchedEffect(authState) {
-        when (authState) {
-            is AuthState.Authenticated -> {
-                showSuccess = true
-                delay(1200)
-                onLoginSuccess()
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        try {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = task.getResult(ApiException::class.java) as GoogleSignInAccount
+            Log.i("GoogleSignIn", "Google sign-in successful: ${account.displayName} ${account.email}")
+            if (account.idToken != null) {
+                authViewModel.handleGoogleSignIn(account.idToken!!, account.displayName, account.email)
+            } else {
+                Log.e("GoogleSignIn", "Google sign-in failed: no ID token")
             }
-            else -> {}
+        } catch (e: ApiException) {
+            Log.e("GoogleSignIn", "Google sign-in failed: ${e.statusCode} ${e.message}")
+        } catch (e: Exception) {
+            Log.e("GoogleSignIn", "Google sign-in failed: ${e.message}")
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize().background(Background),
-        contentAlignment = Alignment.Center
+    val fadeAlpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(800),
+        label = "fadeIn"
+    )
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            onLoginSuccess()
+        }
+    }
+
+    if (showWebView) {
+        BackHandler(onBack = { showWebView = false })
+        DiscordLoginWebView(
+            onLoginCompleted = { token ->
+                showWebView = false
+                authViewModel.loginWithToken(token)
+            }
+        )
+        return
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = Dimens.xxl)
+            .alpha(fadeAlpha),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Spacer(Modifier.weight(0.5f))
+
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(Accent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(com.kyrx.mypresence.R.drawable.ic_discord),
+                contentDescription = "Discord",
+                tint = Accent,
+                modifier = Modifier.size(52.dp)
+            )
+        }
 
-            StaggeredReveal(0, delayMs = 100) {
-                AnimatedLogo(size = 100.dp, showOrbits = true)
-            }
+        Spacer(Modifier.height(Dimens.xl))
 
-            Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "My Presence",
+            style = MaterialTheme.typography.displaySmall,
+            color = TextPrimary,
+            textAlign = TextAlign.Center
+        )
 
-            StaggeredReveal(1, delayMs = 150) {
-                GradientText(
-                    text = "My Presence",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.W700
-                )
-            }
+        Spacer(Modifier.height(Dimens.sm))
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Show your activity on Discord",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
 
-            StaggeredReveal(2, delayMs = 200) {
-                Text(
-                    text = if (showSuccess) "Connected" else "Show your presence on Discord",
-                    color = TextSecondary,
-                    fontSize = 15.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
+        Spacer(Modifier.weight(0.25f))
 
-            Spacer(modifier = Modifier.height(48.dp))
+        if (loginError != null) {
+            Text(
+                text = loginError!!,
+                color = Error,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = Dimens.md)
+            )
+        }
 
-            StaggeredReveal(3, delayMs = 250) {
-                GlassCard(
-                    appearance = GlassAppearance(
-                        baseColor = SurfaceCard, alpha = 0.5f,
-                        borderColor = Gold.copy(alpha = 0.1f),
-                        glowColor = Gold.copy(alpha = 0.04f),
-                        cornerRadius = 16.dp
+        Button(
+            onClick = { showWebView = true },
+            enabled = !isLoginInProgress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(Dimens.buttonHeight),
+            shape = RoundedCornerShape(Dimens.buttonCorner),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Accent,
+                contentColor = TextPrimary
+            )
+        ) {
+            Text(
+                text = if (isLoginInProgress) "Opening Discord..." else "Log in with Discord",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.W600
+            )
+        }
+
+        Spacer(Modifier.height(Dimens.sm))
+
+        Text(
+            text = "Login with your Discord credentials",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextTertiary,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(Dimens.md))
+
+        Row(
+            modifier = Modifier
+                .clickable { authViewModel.toggleMoreOptions() }
+                .padding(vertical = Dimens.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "More options",
+                style = MaterialTheme.typography.bodySmall,
+                color = AccentMuted
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Expand",
+                tint = AccentMuted,
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(start = 2.dp)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showMoreOptions,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                            .requestEmail()
+                            .build()
+                        val googleClient = GoogleSignIn.getClient(context, gso)
+                        googleClient.signOut()
+                        googleSignInLauncher.launch(googleClient.signInIntent)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(Dimens.buttonCorner),
+                    border = BorderStroke(1.dp, SurfaceBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.kyrx.mypresence.R.drawable.ic_google),
+                        contentDescription = "Google",
+                        modifier = Modifier.size(20.dp)
                     )
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Security,
-                            contentDescription = null,
-                            tint = Gold, modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.size(10.dp))
-                        Column {
-                            Text("Secure Authentication", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.W600)
-                            Text("OAuth2 with PKCE — Encrypted & secure", color = TextTertiary, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            StaggeredReveal(4, delayMs = 300) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(brush = Brush.horizontalGradient(listOf(Blurple, BlurpleLight)))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { viewModel.startOAuth() }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isOAuthInProgress) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            color = TextPrimary, strokeWidth = 2.dp
-                        )
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            DiscordIcon(modifier = Modifier.size(20.dp), tint = TextPrimary)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                "Continue with Discord",
-                                color = TextPrimary, fontSize = 16.sp,
-                                fontWeight = FontWeight.W600, letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (oauthError != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = oauthError!!,
-                    color = Color(0xFFFF6B6B),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                )
-            } else if (authState is AuthState.Error) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = (authState as AuthState.Error).message,
-                    color = Color(0xFFFF6B6B),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                )
-            }
-
-            if (isOAuthInProgress) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCard.copy(alpha = 0.5f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { viewModel.cancelOAuth() }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
+                    Spacer(Modifier.width(12.dp))
                     Text(
-                        "Back from browser? Tap to cancel",
-                        color = BlurpleLight, fontSize = 13.sp, fontWeight = FontWeight.W500
+                        text = "Sign in with Google",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.W500
                     )
                 }
             }
         }
+
+        Spacer(Modifier.weight(0.2f))
     }
 }

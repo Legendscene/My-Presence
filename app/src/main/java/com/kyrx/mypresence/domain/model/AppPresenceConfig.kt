@@ -1,5 +1,8 @@
 package com.kyrx.mypresence.domain.model
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class AppPresenceConfig(
     val packageName: String,
     val name: String = "",

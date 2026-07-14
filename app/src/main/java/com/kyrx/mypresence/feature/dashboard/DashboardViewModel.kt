@@ -3,30 +3,33 @@ package com.kyrx.mypresence.feature.dashboard
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyrx.mypresence.core.gateway.GatewayConnectionState
-import com.kyrx.mypresence.data.remote.DiscordGateway
+import com.kyrx.mypresence.core.gateway.GatewayDiagnostics
 import com.kyrx.mypresence.data.remote.DiscordUser
 import com.kyrx.mypresence.domain.model.AppInfo
 import com.kyrx.mypresence.domain.model.AppPresenceConfig
+import com.kyrx.mypresence.domain.model.CustomRpcPreset
 import com.kyrx.mypresence.domain.model.PresenceData
+import com.kyrx.mypresence.domain.repository.AppRepository
 import com.kyrx.mypresence.domain.repository.AuthRepository
 import com.kyrx.mypresence.domain.repository.AuthState
+import com.kyrx.mypresence.domain.repository.GatewayRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
-import com.kyrx.mypresence.domain.usecase.DetectForegroundAppUseCase
 import com.kyrx.mypresence.domain.usecase.TogglePresenceUseCase
 import com.kyrx.mypresence.domain.usecase.UpdatePresenceUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,23 +37,27 @@ class DashboardViewModel @Inject constructor(
     private val application: Application,
     private val authRepository: AuthRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val discordGateway: DiscordGateway,
+    private val gatewayRepository: GatewayRepository,
     private val togglePresence: TogglePresenceUseCase,
     private val updatePresence: UpdatePresenceUseCase,
-    private val detectForegroundApp: DetectForegroundAppUseCase
+    private val appRepository: AppRepository
 ) : AndroidViewModel(application) {
 
+    private val presenceSeq = AtomicInteger(0)
+    private var lastPresenceSentMs = 0L
+    private var lastSentAppPackage: String? = null
+    private var lastSentSource: String? = null
+    private var presenceResendJob: Job? = null
+
     val authState: StateFlow<AuthState> = authRepository.authState
-    val gatewayState: StateFlow<GatewayConnectionState> = discordGateway.state
+    val gatewayState: StateFlow<GatewayConnectionState> = gatewayRepository.state
+    val diagnostics: StateFlow<GatewayDiagnostics> = gatewayRepository.diagnostics
 
     private val _presenceEnabled = MutableStateFlow(false)
     val presenceEnabled: StateFlow<Boolean> = _presenceEnabled.asStateFlow()
 
-    private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
-    val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
-
-    private val _detectedApp = MutableStateFlow<AppInfo?>(null)
-    val detectedApp: StateFlow<AppInfo?> = _detectedApp.asStateFlow()
+    val installedApps: StateFlow<List<AppInfo>> = appRepository.installedApps
+    val detectedApp: StateFlow<AppInfo?> = appRepository.foregroundApp
 
     val enabledApps: StateFlow<Set<String>> = preferencesRepository.enabledApps
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
@@ -59,6 +66,9 @@ class DashboardViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val appPresenceConfigs: StateFlow<List<AppPresenceConfig>> = preferencesRepository.appPresenceConfigs
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val customRpcPresets: StateFlow<List<CustomRpcPreset>> = preferencesRepository.customRpcPresets
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val customPresenceName: StateFlow<String> = preferencesRepository.presenceName
@@ -71,25 +81,59 @@ class DashboardViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     init {
-        loadUser()
-        scanInstalledApps()
-        startForegroundDetection()
+        restorePresenceState()
     }
 
-    private fun loadUser() {
-        viewModelScope.launch { authRepository.loadCurrentUser() }
+    private fun sendPresence(app: AppInfo?, source: String) {
+        val seq = presenceSeq.incrementAndGet()
+        val now = System.currentTimeMillis()
+        val delta = if (lastPresenceSentMs > 0) now - lastPresenceSentMs else -1L
+        val appPkg = app?.packageName
+        if (appPkg == lastSentAppPackage && source == lastSentSource && delta > 0 && delta < 3000) {
+            Log.d("DashboardVM", "[PRESENCE #$seq] Skipping duplicate send: same app ($appPkg) from same source ($source) ${delta}ms ago")
+            return
+        }
+        lastSentAppPackage = appPkg
+        lastSentSource = source
+        Log.d("DashboardVM", "[PRESENCE #$seq] sendPresence() from=$source elapsedSinceLast=${delta}ms")
+        if (app == null) {
+            Log.d("DashboardVM", "[PRESENCE #$seq] No foreground app detected – sending fallback: Playing My Presence / Using My Presence")
+        } else {
+            val enabled = enabledApps.value.isEmpty() || app.packageName in enabledApps.value
+            Log.d("DashboardVM", "[PRESENCE #$seq] Foreground app: ${app.appName} (${app.packageName}) enabled=$enabled")
+        }
+        lastPresenceSentMs = now
+        viewModelScope.launch { updatePresence(app) }
     }
 
-    val currentUser: DiscordUser?
-        get() = (authState.value as? AuthState.Authenticated)?.user
+    private fun startPresenceResendLoop() {
+        stopPresenceResendLoop()
+        Log.d("DashboardVM", "Presence resend loop is owned by PresenceService")
+    }
 
-    fun togglePresence(enabled: Boolean) {
-        _presenceEnabled.value = enabled
-        if (enabled) {
-            viewModelScope.launch {
-                val success = togglePresence.start()
-                if (!success) _presenceEnabled.value = false
+    private fun stopPresenceResendLoop() {
+        presenceResendJob?.cancel()
+        presenceResendJob = null
+    }
+
+    private fun restorePresenceState() {
+        viewModelScope.launch {
+            val token = preferencesRepository.userToken.first()
+            if (token.isNotBlank()) {
+                _presenceEnabled.value = true
+                preferencesRepository.setPresenceEnabled(true)
+                togglePresence.start()
             }
+        }
+    }
+
+    fun togglePresenceEnabled(enabled: Boolean) {
+        _presenceEnabled.value = enabled
+        viewModelScope.launch {
+            preferencesRepository.setPresenceEnabled(enabled)
+        }
+        if (enabled) {
+            togglePresence.start()
         } else {
             togglePresence.stop()
         }
@@ -98,10 +142,9 @@ class DashboardViewModel @Inject constructor(
     fun toggleKeepOnline(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setKeepOnline24_7(enabled)
-            discordGateway.setKeepOnlineMode(enabled)
+            gatewayRepository.setMaxReconnectAttempts(if (enabled) 10000 else 5)
             if (_presenceEnabled.value) {
-                discordGateway.disconnect()
-                delay(500)
+                gatewayRepository.disconnect()
                 togglePresence.start()
             }
         }
@@ -124,11 +167,20 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.removeAppPresenceConfig(packageName) }
     }
 
+    fun saveCustomRpcPreset(preset: CustomRpcPreset) {
+        viewModelScope.launch { preferencesRepository.saveCustomRpcPreset(preset) }
+    }
+
+    fun deleteCustomRpcPreset(presetId: String) {
+        viewModelScope.launch { preferencesRepository.deleteCustomRpcPreset(presetId) }
+    }
+
     fun saveCustomPresence(name: String, details: String, state: String, type: Int) {
         viewModelScope.launch {
             preferencesRepository.savePresenceConfig(name, details, state, type)
-            if (_presenceEnabled.value && _detectedApp.value == null) {
-                updatePresence(null)
+            if (_presenceEnabled.value && detectedApp.value == null) {
+                Log.d("DashboardVM", "Custom presence saved, re-sending presence")
+                sendPresence(null, "custom-save")
             }
         }
     }
@@ -138,49 +190,31 @@ class DashboardViewModel @Inject constructor(
         return PresenceData(
             name = cfg?.name?.ifBlank { app.appName } ?: app.appName,
             details = cfg?.details?.ifBlank { "Using ${app.appName}" } ?: "Using ${app.appName}",
-            state = cfg?.state?.ifBlank { "via My Presence" } ?: "via My Presence",
+            state = cfg?.state?.takeUnless {
+                it.equals("via My Presence", ignoreCase = true) ||
+                    it.equals("via My Presence app", ignoreCase = true)
+            }.orEmpty(),
             type = cfg?.activityType?.takeIf { it >= 0 } ?: 0
         )
     }
 
-    private fun scanInstalledApps() {
-        viewModelScope.launch {
-            val pm = application.packageManager
-            val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-            val activities = pm.queryIntentActivities(intent, 0)
-            val apps = activities
-                .filter { it.activityInfo.packageName != application.packageName }
-                .distinctBy { it.activityInfo.packageName }
-                .map {
-                    val ai = it.activityInfo
-                    AppInfo(ai.packageName, ai.loadLabel(pm).toString())
-                }
-                .sortedBy { it.appName }
-            _installedApps.value = apps
-        }
-    }
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    private fun startForegroundDetection() {
+    fun refresh() {
         viewModelScope.launch {
-            while (isActive) {
-                delay(if (_presenceEnabled.value) 3000L else 10000L)
-                val enabled = enabledApps.value
-                val app = detectForegroundApp.getForegroundApp()
-                if (app != null && app.packageName in enabled) {
-                    if (app != _detectedApp.value) {
-                        _detectedApp.value = app
-                        if (_presenceEnabled.value) updatePresence(app)
-                    }
-                } else if (_detectedApp.value != null) {
-                    _detectedApp.value = null
-                    if (_presenceEnabled.value) updatePresence(null)
-                }
+            _isRefreshing.value = true
+            appRepository.refresh()
+            if (_presenceEnabled.value) {
+                gatewayRepository.disconnect()
+                togglePresence.start()
             }
+            kotlinx.coroutines.delay(800)
+            _isRefreshing.value = false
         }
     }
 
-    fun hasUsageStatsPermission(): Boolean = detectForegroundApp.hasUsageStatsPermission()
-
+    fun hasUsageStatsPermission(): Boolean = appRepository.checkUsageStatsPermission()
     fun requestUsageAccessIntent(): Intent = Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
 
     fun requestBatteryOptimizationIntent(): Intent {
@@ -195,11 +229,12 @@ class DashboardViewModel @Inject constructor(
         return pm?.isIgnoringBatteryOptimizations(application.packageName) ?: false
     }
 
-    fun isAppEnabled(packageName: String): Boolean = packageName in enabledApps.value
+    fun isAppEnabled(packageName: String): Boolean =
+        enabledApps.value.isEmpty() || packageName in enabledApps.value
 
     fun logout() {
         viewModelScope.launch {
-            discordGateway.disconnect()
+            gatewayRepository.disconnect()
             authRepository.logout()
             preferencesRepository.clearAll()
         }

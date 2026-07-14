@@ -60,6 +60,7 @@ class AppRepositoryImpl @Inject constructor(
     private val _packageChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     private var appCache: List<AppInfo> = emptyList()
+    private var launcherPackages: Set<String> = emptySet()
     @Volatile private var refreshDone = false
 
     override val installedApps: StateFlow<List<AppInfo>> = combine(
@@ -120,6 +121,10 @@ class AppRepositoryImpl @Inject constructor(
 
             val launcherApps = pm.queryIntentActivities(
                 Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
+                0
+            ).map { it.activityInfo.packageName }.toSet()
+            launcherPackages = pm.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) },
                 0
             ).map { it.activityInfo.packageName }.toSet()
 
@@ -210,7 +215,7 @@ class AppRepositoryImpl @Inject constructor(
         scope.launch {
             while (scope.isActive) {
                 detectForeground()
-                delay(1000)
+                delay(500)
             }
         }
     }
@@ -228,35 +233,94 @@ class AppRepositoryImpl @Inject constructor(
             }
             val now = System.currentTimeMillis()
             val usageEvents = usageStatsManager.queryEvents(now - 5000, now)
-            var foregroundPkg: String? = null
+            var latestPackage: String? = null
+            var latestEventType: Int? = null
+            var latestEventTimestamp = Long.MIN_VALUE
+            var latestEventPriority = Int.MIN_VALUE
             val event = UsageEvents.Event()
             while (usageEvents.hasNextEvent()) {
                 usageEvents.getNextEvent(event)
-                if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND || event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                    foregroundPkg = event.packageName
-                    Log.d("DETECT_PIPE", "DETECT: event=${event.eventType} pkg=$foregroundPkg ts=${event.timeStamp} thread=${Thread.currentThread().id} hash=${event.hashCode()}")
+                when (event.eventType) {
+                    UsageEvents.Event.MOVE_TO_FOREGROUND,
+                    UsageEvents.Event.ACTIVITY_RESUMED,
+                    UsageEvents.Event.MOVE_TO_BACKGROUND,
+                    UsageEvents.Event.ACTIVITY_PAUSED -> {
+                        // Android can emit a new app's RESUMED and the old app's STOPPED
+                        // in the same millisecond. Prefer the foreground event in that tie.
+                        val priority = if (
+                            event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                            event.eventType == UsageEvents.Event.ACTIVITY_RESUMED
+                        ) 1 else 0
+                        if (
+                            event.timeStamp > latestEventTimestamp ||
+                            (event.timeStamp == latestEventTimestamp && priority >= latestEventPriority)
+                        ) {
+                            latestPackage = event.packageName
+                            latestEventType = event.eventType
+                            latestEventTimestamp = event.timeStamp
+                            latestEventPriority = priority
+                        }
+                    }
                 }
             }
 
-            val pm = context.packageManager
-            if (foregroundPkg != null && foregroundPkg != context.packageName) {
-                val appInfo = appCache.find { it.packageName == foregroundPkg } ?: run {
-                    val appName = try {
-                        val ai = pm.getApplicationInfo(foregroundPkg!!, 0)
-                        pm.getApplicationLabel(ai).toString()
-                    } catch (_: Exception) { foregroundPkg!! }
-                    AppInfo(packageName = foregroundPkg!!, appName = appName)
+            if (latestPackage == null || latestEventType == null) return
+
+            val currentPackage = _foregroundApp.value?.packageName
+            val isForegroundEvent = latestEventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                latestEventType == UsageEvents.Event.ACTIVITY_RESUMED
+
+            if (isForegroundEvent && shouldTrackPackage(latestPackage)) {
+                val appInfo = appCache.find { it.packageName == latestPackage }
+                if (appInfo != null) {
+                    if (currentPackage != latestPackage) {
+                        Log.d("DETECT_PIPE", "DETECT: foreground ${appInfo.packageName} ts=$latestEventTimestamp")
+                        _foregroundApp.value = appInfo
+                    }
+                    return
                 }
-                if (_foregroundApp.value?.packageName != foregroundPkg) {
-                    _foregroundApp.value = appInfo
-                }
-            } else {
-                if (_foregroundApp.value != null) {
-                    _foregroundApp.value = null
-                }
+            }
+
+            // The newest event is no longer a launchable tracked app. Emit null so the
+            // service clears Discord instead of keeping the previously used app alive.
+            if (currentPackage != null) {
+                Log.d(
+                    "DETECT_PIPE",
+                    "DETECT: clear previous=$currentPackage latest=$latestPackage type=$latestEventType ts=$latestEventTimestamp"
+                )
+                _foregroundApp.value = null
             }
         } catch (e: Exception) {
             Log.w("AppDetect", "Foreground detection exception: ${e::class.simpleName} - ${e.message}")
         }
+    }
+
+    private fun shouldTrackPackage(packageName: String?): Boolean {
+        if (packageName.isNullOrBlank()) return false
+        if (packageName == context.packageName) return false
+        if (packageName in launcherPackages) return false
+        if (packageName in ignoredForegroundPackages) return false
+        if (packageName.startsWith("com.android.systemui")) return false
+        if (packageName.startsWith("com.google.android.apps.nexuslauncher")) return false
+        if (packageName.startsWith("com.android.launcher")) return false
+        return true
+    }
+
+    private companion object {
+        val ignoredForegroundPackages = setOf(
+            "android",
+            "com.android.settings",
+            "com.android.systemui",
+            "com.google.android.permissioncontroller",
+            "com.google.android.packageinstaller",
+            "com.miui.home",
+            "com.miui.securitycenter",
+            "com.sec.android.app.launcher",
+            "com.samsung.android.app.launcher",
+            "com.oppo.launcher",
+            "com.coloros.launcher",
+            "com.vivo.launcher",
+            "com.huawei.android.launcher"
+        )
     }
 }

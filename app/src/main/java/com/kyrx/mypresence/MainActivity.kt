@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         val uri = intent.data
-        Log.d("OAuthCallback", "Received intent URI: $uri (scheme=${uri?.scheme} host=${uri?.host} path=${uri?.path})")
+        Log.d("OAuthCallback", "Received intent URI (scheme=${uri?.scheme} host=${uri?.host} path=${uri?.path})")
         if (uri == null || uri.scheme !in setOf(Constants.REDIRECT_SCHEME, "mypresence")) {
             Log.d("OAuthCallback", "URI not an auth callback scheme, ignoring")
             return
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         val state = uri.getQueryParameter("state")
         val error = uri.getQueryParameter("error")
         val errorDescription = uri.getQueryParameter("error_description")
-        Log.d("OAuthCallback", "Extracted code=$code state=$state error=$error")
+        Log.d("OAuthCallback", "OAuth callback received: error=$error")
         if ((code != null && state != null) || error != null) {
             OAuthCallbackHandler.handleCallback(
                 CallbackResult(

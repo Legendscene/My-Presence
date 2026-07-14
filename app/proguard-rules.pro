@@ -23,7 +23,7 @@
 -keepattributes Exceptions, InnerClasses, Signature, Deprecated,
     SourceFile, LineNumberTable, *Annotation*, EnclosingMethod
 
-# Keep source file names for crash reports (not line numbers for security)
+# Keep source file names and line numbers for crash reports
 -keepattributes SourceFile, LineNumberTable
 
 # ── Ktor ────────────────────────────────────────────────────────────
@@ -84,6 +84,17 @@
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
     <init>(...);
 }
+
+# ── Firebase Crashlytics ───────────────────────────────────────────
+-keepattributes SourceFile, LineNumberTable
+-keep class com.google.firebase.crashlytics.** { *; }
+-dontwarn com.google.firebase.crashlytics.**
+
+# ── Firebase Performance Monitoring ────────────────────────────────
+-keep class com.google.firebase.perf.** { *; }
+-dontwarn com.google.firebase.perf.**
+-keep class com.google.firebase.analytics.** { *; }
+-dontwarn com.google.firebase.analytics.**
 
 # ── Keep Compose (prevent stripping of @Composable functions) ──────
 -dontwarn androidx.compose.**

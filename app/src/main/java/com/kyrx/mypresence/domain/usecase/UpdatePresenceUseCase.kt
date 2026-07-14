@@ -6,6 +6,7 @@ import com.kyrx.mypresence.domain.model.PresenceData
 import com.kyrx.mypresence.domain.repository.AssetRepository
 import com.kyrx.mypresence.domain.repository.GatewayRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,7 +17,10 @@ class UpdatePresenceUseCase @Inject constructor(
     private val gatewayRepository: GatewayRepository,
     private val assetRepository: AssetRepository
 ) {
-    suspend operator fun invoke(detectedApp: AppInfo?) {
+    private var activePresenceKey: String? = null
+    private var activeStartedAtMs: Long? = null
+
+    suspend operator fun invoke(detectedApp: AppInfo?): Boolean {
         val appConfigs = preferencesRepository.appPresenceConfigs.first()
         val customPresence = preferencesRepository.customPresence.first()
 
@@ -29,6 +33,7 @@ class UpdatePresenceUseCase @Inject constructor(
         val status: String
         val largeImage: String
         val largeText: String
+        val largeUrl: String
         val smallImage: String
         val smallText: String
         val button1Label: String
@@ -39,13 +44,15 @@ class UpdatePresenceUseCase @Inject constructor(
         val partyMax: Int?
         val platform: String
         val streamUrl: String
+        val presenceKey: String
+        var needsAssetRetry = false
 
         if (detectedApp != null) {
             val cfg = appConfigs.find { it.packageName == detectedApp.packageName }
             if (cfg != null && (cfg.name.isNotBlank() || cfg.details.isNotBlank() || cfg.state.isNotBlank())) {
                 name = cfg.name.ifBlank { detectedApp.appName }
                 details = cfg.details.ifBlank { defaultDetailsFor(detectedApp) }
-                state = cfg.state.ifBlank { defaultStateFor(detectedApp) }
+                state = cleanAttributionState(cfg.state).ifBlank { defaultStateFor(detectedApp) }
                 activityType = if (cfg.activityType >= 0) cfg.activityType else defaultActivityTypeFor(detectedApp.packageName)
             } else {
                 name = detectedApp.appName
@@ -53,24 +60,21 @@ class UpdatePresenceUseCase @Inject constructor(
                 state = defaultStateFor(detectedApp)
                 activityType = defaultActivityTypeFor(detectedApp.packageName)
             }
-            startTimestamp = System.currentTimeMillis()
+            presenceKey = "app:${detectedApp.packageName}:$name:$details:$state:$activityType"
+            startTimestamp = stableStartFor(presenceKey)
             endTimestamp = null
             status = "online"
 
             val userToken = preferencesRepository.userToken.first()
             val mpKey = if (userToken.isNotBlank()) {
-                assetRepository.resolveAppIcon(
-                    packageName = detectedApp.packageName,
-                    appName = detectedApp.appName,
-                    userToken = userToken,
-                    applicationId = Constants.CLIENT_ID
-                )
+                resolveAppIconWithRetry(detectedApp, userToken)
             } else {
                 null
             }
-
-            largeImage = mpKey ?: ""
-            largeText = if (mpKey != null) detectedApp.appName else ""
+            needsAssetRetry = mpKey.isNullOrBlank()
+            largeImage = mpKey.orEmpty()
+            largeText = if (mpKey.isNullOrBlank()) "" else "My Presence app"
+            largeUrl = if (mpKey.isNullOrBlank()) "" else Constants.GITHUB_REPO_URL
             smallImage = ""
             smallText = ""
 
@@ -87,11 +91,13 @@ class UpdatePresenceUseCase @Inject constructor(
             details = customPresence.details.ifBlank { "Using My Presence" }
             state = customPresence.state
             activityType = customPresence.type
-            startTimestamp = customPresence.startTimestamp ?: System.currentTimeMillis()
+            presenceKey = "custom:$name:$details:$state:$activityType:${customPresence.largeImage}:${customPresence.smallImage}:${customPresence.button1Label}:${customPresence.button2Label}"
+            startTimestamp = customPresence.startTimestamp ?: stableStartFor(presenceKey)
             endTimestamp = customPresence.endTimestamp
             status = customPresence.status.ifBlank { "online" }
             largeImage = customPresence.largeImage
             largeText = customPresence.largeText
+            largeUrl = customPresence.largeUrl.ifBlank { Constants.GITHUB_REPO_URL.takeIf { customPresence.largeImage.isNotBlank() }.orEmpty() }
             smallImage = customPresence.smallImage
             smallText = customPresence.smallText
             button1Label = customPresence.button1Label
@@ -113,6 +119,7 @@ class UpdatePresenceUseCase @Inject constructor(
             status = status,
             largeImage = largeImage,
             largeText = largeText,
+            largeUrl = largeUrl,
             smallImage = smallImage,
             smallText = smallText,
             startTimestamp = startTimestamp,
@@ -127,6 +134,30 @@ class UpdatePresenceUseCase @Inject constructor(
             streamUrl = streamUrl
         )
         gatewayRepository.updatePresence(presence)
+        return !needsAssetRetry
+    }
+
+    private fun stableStartFor(key: String): Long {
+        val now = System.currentTimeMillis()
+        if (activePresenceKey != key || activeStartedAtMs == null) {
+            activePresenceKey = key
+            activeStartedAtMs = now
+        }
+        return activeStartedAtMs ?: now
+    }
+
+    private suspend fun resolveAppIconWithRetry(app: AppInfo, userToken: String): String? {
+        repeat(3) { attempt ->
+            val resolved = assetRepository.resolveAppIcon(
+                packageName = app.packageName,
+                appName = app.appName,
+                userToken = userToken,
+                applicationId = Constants.RPC_APPLICATION_ID
+            )
+            if (!resolved.isNullOrBlank()) return resolved
+            delay(350L * (attempt + 1))
+        }
+        return null
     }
 
     private fun defaultActivityTypeFor(packageName: String): Int {
@@ -149,7 +180,12 @@ class UpdatePresenceUseCase @Inject constructor(
         return when {
             lower.contains("instagram") -> "Browsing feed"
             lower.contains("whatsapp") || lower.contains("telegram") || lower.contains("discord") -> "Messages are private"
-            else -> "via My Presence"
+            else -> ""
         }
+    }
+
+    private fun cleanAttributionState(value: String): String {
+        val normalized = value.trim().lowercase()
+        return if (normalized == "via my presence" || normalized == "via my presence app") "" else value
     }
 }

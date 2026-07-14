@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.room)
     id("com.google.gms.google-services")
 }
+apply(plugin = "com.google.firebase.crashlytics")
 
 kotlin {
     jvmToolchain(17)
@@ -19,25 +20,43 @@ android {
     defaultConfig {
         applicationId = "com.kyrx.mypresence"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val secretsFile = rootProject.file("secrets.properties")
-        val discordClientId = if (secretsFile.exists()) {
-            secretsFile.readLines().firstOrNull { it.startsWith("DISCORD_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
-        } else ""
-        val googleWebClientId = if (secretsFile.exists()) {
-            secretsFile.readLines().firstOrNull { it.startsWith("GOOGLE_WEB_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
-        } else ""
+        val secretsProps = if (secretsFile.exists()) {
+            secretsFile.readText().replace("\uFEFF", "").lines()
+        } else emptyList()
+        val discordClientId = secretsProps.firstOrNull { it.startsWith("DISCORD_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
+        val googleWebClientId = secretsProps.firstOrNull { it.startsWith("GOOGLE_WEB_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
+        val discordBotToken = secretsProps.firstOrNull { it.startsWith("DISCORD_BOT_TOKEN=") }?.substringAfter("=")?.trim() ?: ""
+        val imgurClientId = secretsProps.firstOrNull { it.startsWith("IMGUR_CLIENT_ID=") }?.substringAfter("=")?.trim() ?: ""
+        val gitCommit = try {
+            rootProject.file(".git/HEAD").readText().trim()
+        } catch (_: Exception) { "unknown" }
 
         buildConfigField("String", "DISCORD_CLIENT_ID", "\"$discordClientId\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "DISCORD_BOT_TOKEN", "\"$discordBotToken\"")
+        buildConfigField("String", "IMGUR_CLIENT_ID", "\"$imgurClientId\"")
+        buildConfigField("String", "GIT_COMMIT", "\"${gitCommit.take(7)}\"")
 
         manifestPlaceholders["discordClientId"] = discordClientId
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+
     }
+
+    androidResources {
+        localeFilters += listOf("en")
+    }
+
+    ndkVersion = "28.0.13004117"
 
     buildTypes {
         debug {
@@ -50,6 +69,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                abiFilters += listOf("arm64-v8a")
+            }
+        }
+    }
+
+    bundle {
+        density {
+            enableSplit = true
+        }
+        language {
+            enableSplit = true
         }
     }
 
@@ -138,9 +169,12 @@ dependencies {
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
 
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Testing
     testImplementation(libs.junit)

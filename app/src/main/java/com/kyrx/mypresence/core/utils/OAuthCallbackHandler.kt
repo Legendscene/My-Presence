@@ -29,7 +29,7 @@ object OAuthCallbackHandler {
     }
 
     fun handleCallback(result: CallbackResult): Boolean {
-        Log.d("OAuthCallback", "handleCallback called: code=${result.code} state=${result.state} error=${result.error}")
+        Log.d("OAuthCallback", "handleCallback called: error=${result.error}")
         val d = deferred
         if (d != null && !d.isCompleted) {
             Log.d("OAuthCallback", "Completing existing deferred")

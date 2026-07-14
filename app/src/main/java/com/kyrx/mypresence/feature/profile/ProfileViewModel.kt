@@ -3,9 +3,9 @@ package com.kyrx.mypresence.feature.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyrx.mypresence.data.remote.DiscordUser
-import com.kyrx.mypresence.data.remote.DiscordGateway
 import com.kyrx.mypresence.domain.repository.AuthRepository
 import com.kyrx.mypresence.domain.repository.AuthState
+import com.kyrx.mypresence.domain.repository.GatewayRepository
 import com.kyrx.mypresence.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,7 +19,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val discordGateway: DiscordGateway
+    private val gatewayRepository: GatewayRepository
 ) : ViewModel() {
 
     val currentUser: StateFlow<DiscordUser?> = authRepository.authState.map { state ->
@@ -28,7 +28,7 @@ class ProfileViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            discordGateway.disconnect()
+            gatewayRepository.disconnect()
             authRepository.logout()
             preferencesRepository.clearAll()
         }

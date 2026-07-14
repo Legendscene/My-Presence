@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.1"
-kotlin = "2.2.10"
+kotlin = "2.0.21"
 ksp = "2.2.10-2.0.2"
 hilt = "2.60"
 composeBom = "2026.02.01"
@@ -20,6 +20,9 @@ splashScreen = "1.0.1"
 googlePlayServicesAuth = "21.3.0"
 securityCrypto = "1.1.0-alpha06"
 browser = "1.8.0"
+
+
+firebaseAnalytics = "22.4.2"
 
 [libraries]
 # Core
@@ -75,6 +78,7 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 
 # Coil (image loading)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

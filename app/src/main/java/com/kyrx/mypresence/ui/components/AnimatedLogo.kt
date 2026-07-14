@@ -29,8 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyrx.mypresence.R
-import com.kyrx.mypresence.ui.theme.Blurple
-import com.kyrx.mypresence.ui.theme.GradientGold
+import com.kyrx.mypresence.ui.theme.Accent
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -38,7 +37,7 @@ import kotlin.math.sin
 fun AnimatedLogo(
     modifier: Modifier = Modifier,
     size: Dp = 100.dp,
-    orbitColor: Color = Blurple,
+    orbitColor: Color = Accent,
     showOrbits: Boolean = true
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "logo")
@@ -97,7 +96,7 @@ fun AnimatedLogo(
                 .clip(CircleShape)
                 .background(
                     brush = Brush.linearGradient(
-                        colors = GradientGold
+                        colors = listOf(Accent, Accent)
                     )
                 ),
             contentAlignment = Alignment.Center

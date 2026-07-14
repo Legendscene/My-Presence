@@ -1,5 +1,8 @@
 package com.kyrx.mypresence.feature.diagnostics
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class LogEntry(
     val id: Long,
     val message: String,

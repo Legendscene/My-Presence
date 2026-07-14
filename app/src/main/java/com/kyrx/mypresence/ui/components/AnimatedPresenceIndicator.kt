@@ -17,7 +17,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.kyrx.mypresence.ui.theme.Gold
+import com.kyrx.mypresence.ui.theme.Accent
 import com.kyrx.mypresence.ui.theme.Success
 
 @Composable
